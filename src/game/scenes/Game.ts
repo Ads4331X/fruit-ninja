@@ -83,7 +83,23 @@ export class Game extends Scene {
         pineapple: "impact_pineapple",
     };
 
+    private spawnTimer!: Phaser.Time.TimerEvent;
+
+    // Dedicated group for fruits/bombs only, so slice-detection and the
+    // offscreen check don't have to scan every object in the scene
+    // (background, text, hearts, splash/half decorations, etc).
     private spawnables!: Phaser.Physics.Arcade.Group;
+
+    // ------------------------------------------------------------------
+    // DIFFICULTY SCALING CONFIG
+    // ------------------------------------------------------------------
+    // Score at which difficulty reaches its maximum (100% ramped).
+    private difficultyRampScore = 8000;
+    // How much faster fruits move (launch/fall speed) at max difficulty.
+    private maxSpeedMultiplier = 1.8;
+    // Spawn cadence: starts at baseSpawnDelay ms, eases down to minSpawnDelay ms.
+    private baseSpawnDelay = 1000;
+    private minSpawnDelay = 420;
 
     constructor() {
         super("Game");
@@ -104,8 +120,8 @@ export class Game extends Scene {
 
         this.spawnables = this.physics.add.group();
 
-        this.time.addEvent({
-            delay: 1000,
+        this.spawnTimer = this.time.addEvent({
+            delay: this.baseSpawnDelay,
             loop: true,
             callback: () => this.spawnFruit(),
         });
@@ -157,6 +173,42 @@ export class Game extends Scene {
                 GameSettings.musicMuted,
             );
         }
+    }
+
+    // ------------------------------------------------------------------
+    // DIFFICULTY
+    // ------------------------------------------------------------------
+    /** 0 -> 1 progress toward max difficulty, eased with smoothstep for a gradual ramp. */
+    private getDifficultyProgress(): number {
+        const raw = Phaser.Math.Clamp(
+            this.score / this.difficultyRampScore,
+            0,
+            1,
+        );
+        return raw * raw * (3 - 2 * raw); // smoothstep easing
+    }
+
+    /** Multiplier applied to fruit launch/fall speed. 1 = base speed. */
+    private getSpeedMultiplier(): number {
+        const t = this.getDifficultyProgress();
+        return 1 + t * (this.maxSpeedMultiplier - 1);
+    }
+
+    /** Spawn timer delay in ms, eased down as difficulty increases. */
+    private getSpawnDelay(): number {
+        const t = this.getDifficultyProgress();
+        return Phaser.Math.Linear(this.baseSpawnDelay, this.minSpawnDelay, t);
+    }
+
+    /**
+     * TimerEvent.delay is read-only in current Phaser versions, so instead
+     * we scale how fast the timer's internal clock progresses via timeScale.
+     * timeScale = baseSpawnDelay / desiredDelay, e.g. desiredDelay shrinking
+     * toward minSpawnDelay makes timeScale grow above 1, firing more often.
+     */
+    private applySpawnRate() {
+        const desiredDelay = this.getSpawnDelay();
+        this.spawnTimer.timeScale = this.baseSpawnDelay / desiredDelay;
     }
 
     // ------------------------------------------------------------------
@@ -472,7 +524,7 @@ export class Game extends Scene {
     }
 
     // ------------------------------------------------------------------
-    // FRUIT SPAWNING
+    // FRUIT + BOMB SPAWNING
     // ------------------------------------------------------------------
     spawnFruit() {
         const { width, height } = this.cameras.main;
@@ -491,24 +543,38 @@ export class Game extends Scene {
         const item = this.physics.add.image(x, y, key).setScale(0.3);
         this.spawnables.add(item);
 
+        // --- Difficulty-scaled speed, height stays capped exactly as before ---
+        const speedMultiplier = this.getSpeedMultiplier();
         const worldGravityY = this.physics.world.gravity.y || 800;
+        const effectiveGravityY = worldGravityY * speedMultiplier;
 
         const minPeakFraction = 0.6;
         const maxPeakFraction = 1;
         const targetPeakHeight =
             height * Phaser.Math.FloatBetween(minPeakFraction, maxPeakFraction);
 
-        const upwardSpeed = Math.sqrt(2 * worldGravityY * targetPeakHeight);
+        // h = v^2 / (2g). Solving for v using the SAME targetPeakHeight while
+        // gravity is scaled up keeps the max spawn/peak height unchanged, but
+        // makes the whole arc (ascent + descent) play out faster.
+        const upwardSpeed = Math.sqrt(2 * effectiveGravityY * targetPeakHeight);
 
         const maxSideways = Math.min(width * 0.12, 150);
-        const sidewaysSpeed = Phaser.Math.Between(-maxSideways, maxSideways);
+        const sidewaysSpeed =
+            Phaser.Math.Between(-maxSideways, maxSideways) * speedMultiplier;
 
         item.setVelocity(sidewaysSpeed, -upwardSpeed);
         item.setAngularVelocity(Phaser.Math.Between(-200, 200));
 
+        // Arcade Physics adds body gravity ON TOP of world gravity, so only
+        // set the extra amount needed to reach effectiveGravityY overall.
+        item.setGravityY(effectiveGravityY - worldGravityY);
+
         item.setData("checkOffscreen", true);
         item.setData("sliced", false);
         item.setData("isHazard", isBomb);
+
+        // Ramp spawn cadence smoothly with difficulty too ("overall game speed").
+        this.applySpawnRate();
     }
 
     update(_time: number, delta: number) {
