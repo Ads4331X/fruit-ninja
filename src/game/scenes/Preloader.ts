@@ -66,6 +66,8 @@ export class Preloader extends Scene {
         this.load.audio("bomb_explode", "Bomb-explode.wav");
         this.load.audio("game_start", "Game-start.wav");
         this.load.audio("game_over", "Game-over.wav");
+        this.load.audio("ui_tap", "ui-button-push.wav");
+        this.load.audio("ui_click", "Next-screen-button.wav");
         this.load.audio("bgm", "Combo-Blitz-Backing.wav");
 
         this.load.setPath("assets");
