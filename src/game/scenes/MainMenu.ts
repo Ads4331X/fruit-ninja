@@ -28,26 +28,42 @@ export class MainMenu extends Scene {
             .setOrigin(0.5)
             .setDepth(100);
 
-        const playButton = this.add
-            .text(
-                this.cameras.main.centerX,
-                this.cameras.main.height * 0.6,
-                "PLAY",
-                {
-                    fontFamily: "Arial Black",
-                    fontSize: "32px",
-                    color: "#ffffff",
-                    stroke: "#000000",
-                    strokeThickness: 5,
-                },
-            )
+        this.createMenuButton(
+            this.cameras.main.centerX,
+            this.cameras.main.height * 0.6,
+            "PLAY",
+            () => this.scene.start("Game"),
+        );
+
+        this.createMenuButton(
+            this.cameras.main.centerX,
+            this.cameras.main.height * 0.72,
+            "SETTINGS",
+            () => this.scene.start("Setting"),
+        );
+    }
+
+    private createMenuButton(
+        x: number,
+        y: number,
+        label: string,
+        onClick: () => void,
+    ) {
+        const button = this.add
+            .text(x, y, label, {
+                fontFamily: "Arial Black",
+                fontSize: "32px",
+                color: "#ffffff",
+                stroke: "#000000",
+                strokeThickness: 5,
+            })
             .setOrigin(0.5)
             .setDepth(100)
             .setInteractive({ useHandCursor: true });
 
-        playButton.on("pointerover", () => playButton.setScale(1.1));
-        playButton.on("pointerout", () => playButton.setScale(1));
-        playButton.on("pointerdown", () => this.scene.start("Game"));
+        button.on("pointerover", () => button.setScale(1.1));
+        button.on("pointerout", () => button.setScale(1));
+        button.on("pointerdown", onClick);
     }
 }
 
