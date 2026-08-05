@@ -3,7 +3,6 @@ import { getPeerID, onMobileConnected } from "./DesktopPeer";
 import { EventBus } from "../EventBus";
 import QRCode from "qrcode";
 import { GameSettings } from "./GameSettings";
-
 export class Setting extends Scene {
     background: GameObjects.Image;
     title: GameObjects.Text;
@@ -39,14 +38,18 @@ export class Setting extends Scene {
         graphics.fillStyle(0x000000, 0.7);
         graphics.lineStyle(8, 0xffff00, 1);
 
-        // Calculate the panel dimensions
+        // Calculate dimensions first to keep the code clean
         const rectWidth = this.cameras.main.width * 0.6;
         const rectHeight = this.cameras.main.height * 0.75;
 
+        // Subtract half the width and height from the screen center coordinates
         const rectX = this.cameras.main.width / 2 - rectWidth / 2;
         const rectY = this.cameras.main.height / 2 - rectHeight / 2;
 
+        // Draw the filled rectangle
         graphics.fillRoundedRect(rectX, rectY, rectWidth, rectHeight);
+
+        // Draw the border outline
         graphics.strokeRoundedRect(rectX, rectY, rectWidth, rectHeight);
 
         this.buildPanelContents(rectX, rectY, rectWidth, rectHeight);
@@ -89,62 +92,6 @@ export class Setting extends Scene {
         currentY += rowSpacing * 1.4;
 
         this.createPlayOnMobileButton(centerX, currentY, panelWidth);
-    }
-
-    // ------------------------------------------------------------------
-    // PLAY ON MOBILE
-    // ------------------------------------------------------------------
-    private createPlayOnMobileButton(
-        centerX: number,
-        y: number,
-        panelWidth: number,
-    ) {
-        const buttonWidth = panelWidth * 0.55;
-        const buttonHeight = 64;
-
-        const bg = this.add
-            .rectangle(centerX, y, buttonWidth, buttonHeight, 0x2196f3, 1)
-            .setStrokeStyle(4, 0xffffff)
-            .setInteractive({ useHandCursor: true });
-
-        this.add
-            .text(centerX, y, "Play on Mobile", {
-                fontSize: "28px",
-                fontStyle: "bold",
-                color: "#ffffff",
-                fontFamily: "Arial",
-            })
-            .setOrigin(0.5);
-
-        bg.on("pointerover", () => bg.setFillStyle(0x1976d2));
-        bg.on("pointerout", () => bg.setFillStyle(0x2196f3));
-
-        bg.on("pointerdown", async () => {
-            const id = await getPeerID();
-
-            QRCode.toDataURL(id)
-                .then((url: string) => {
-                    const img = new Image();
-                    img.src = url;
-
-                    img.onload = () => {
-                        this.textures.addImage("qr", img);
-
-                        this.add.image(
-                            this.cameras.main.width * 0.5,
-                            this.cameras.main.height * 0.75,
-                            "qr",
-                        );
-                    };
-                })
-                .catch(console.error);
-
-            onMobileConnected(() => {
-                console.log("Phone connected!");
-
-                this.scene.start("Game");
-            });
-        });
     }
 
     private createSettingRow(
@@ -229,9 +176,69 @@ export class Setting extends Scene {
             drawTrack(isOn);
             positionKnob(isOn, true);
             onChange(isOn);
+
+            if (!GameSettings.sfxMuted && this.cache.audio.exists("ui_click")) {
+                this.sound.play("ui_click", { volume: 0.4 });
+            }
         });
 
         return container;
+    }
+
+    // ------------------------------------------------------------------
+    // PLAY ON MOBILE
+    // ------------------------------------------------------------------
+    private createPlayOnMobileButton(
+        centerX: number,
+        y: number,
+        panelWidth: number,
+    ) {
+        const buttonWidth = panelWidth * 0.55;
+        const buttonHeight = 64;
+
+        const bg = this.add
+            .rectangle(centerX, y, buttonWidth, buttonHeight, 0x2196f3, 1)
+            .setStrokeStyle(4, 0xffffff)
+            .setInteractive({ useHandCursor: true });
+
+        this.add
+            .text(centerX, y, "Play on Mobile", {
+                fontSize: "28px",
+                fontStyle: "bold",
+                color: "#ffffff",
+                fontFamily: "Arial",
+            })
+            .setOrigin(0.5);
+
+        bg.on("pointerover", () => bg.setFillStyle(0x1976d2));
+        bg.on("pointerout", () => bg.setFillStyle(0x2196f3));
+
+        bg.on("pointerdown", async () => {
+            const id = await getPeerID();
+
+            QRCode.toDataURL(id)
+                .then((url: string) => {
+                    const img = new Image();
+                    img.src = url;
+
+                    img.onload = () => {
+                        this.textures.addImage("qr", img);
+
+                        this.add.image(
+                            this.cameras.main.width * 0.5,
+                            this.cameras.main.height * 0.75,
+                            "qr",
+                        );
+                    };
+                })
+                .catch(console.error);
+
+            onMobileConnected(() => {
+                console.log("Phone connected!");
+
+                this.scene.start("Game");
+            });
+        });
     }
 
     // ------------------------------------------------------------------
@@ -248,6 +255,7 @@ export class Setting extends Scene {
             .setInteractive({ useHandCursor: true });
 
         back.on("pointerdown", () => {
+            // NOTE: update "MainMenu" to whatever your actual menu scene key is.
             this.scene.start("MainMenu");
         });
     }

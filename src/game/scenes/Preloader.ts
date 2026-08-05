@@ -69,12 +69,14 @@ export class Preloader extends Scene {
         this.load.audio("ui_tap", "ui-button-push.wav");
         this.load.audio("ui_click", "Next-screen-button.wav");
         this.load.audio("bgm", "Combo-Blitz-Backing.wav");
+        this.load.audio("menu_bgm", "Combo-Blitz-Backing-Light.wav");
 
         this.load.setPath("assets");
         this.load.image("heart_full", "heart.png");
         this.load.image("heart_empty", "empty_heart.png");
         this.load.image("logo", "logo.png");
 
+        // diagnostic — logs the exact failing file/URL for any load error
         this.load.on("loaderror", (file: Phaser.Loader.File) => {
             console.error(
                 `[Preloader] FAILED to load "${file.key}" from: ${file.src}`,

@@ -6,6 +6,8 @@ import { Setting } from "./scenes/Setting";
 import { AUTO, Game } from "phaser";
 import { Preloader } from "./scenes/Preloader";
 
+//  Find out more information about the Game Config at:
+//  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
     width: window.innerWidth,
@@ -15,7 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
     physics: {
         default: "arcade",
         arcade: {
-            gravity: { x: 0, y: 800 },
+            gravity: { x: 0, y: 800 }, // pulls fruit back down
             debug: false,
         },
     },
