@@ -1,5 +1,7 @@
 import { GameObjects, Scene } from "phaser";
+import { getPeerID, onMobileConnected } from "./DesktopPeer";
 import { EventBus } from "../EventBus";
+import QRCode from "qrcode";
 import { GameSettings } from "./GameSettings";
 
 export class Setting extends Scene {
@@ -84,6 +86,65 @@ export class Setting extends Scene {
             !GameSettings.sfxMuted,
             (isOn) => GameSettings.setSfxMuted(!isOn),
         );
+        currentY += rowSpacing * 1.4;
+
+        this.createPlayOnMobileButton(centerX, currentY, panelWidth);
+    }
+
+    // ------------------------------------------------------------------
+    // PLAY ON MOBILE
+    // ------------------------------------------------------------------
+    private createPlayOnMobileButton(
+        centerX: number,
+        y: number,
+        panelWidth: number,
+    ) {
+        const buttonWidth = panelWidth * 0.55;
+        const buttonHeight = 64;
+
+        const bg = this.add
+            .rectangle(centerX, y, buttonWidth, buttonHeight, 0x2196f3, 1)
+            .setStrokeStyle(4, 0xffffff)
+            .setInteractive({ useHandCursor: true });
+
+        this.add
+            .text(centerX, y, "Play on Mobile", {
+                fontSize: "28px",
+                fontStyle: "bold",
+                color: "#ffffff",
+                fontFamily: "Arial",
+            })
+            .setOrigin(0.5);
+
+        bg.on("pointerover", () => bg.setFillStyle(0x1976d2));
+        bg.on("pointerout", () => bg.setFillStyle(0x2196f3));
+
+        bg.on("pointerdown", async () => {
+            const id = await getPeerID();
+
+            QRCode.toDataURL(id)
+                .then((url: string) => {
+                    const img = new Image();
+                    img.src = url;
+
+                    img.onload = () => {
+                        this.textures.addImage("qr", img);
+
+                        this.add.image(
+                            this.cameras.main.width * 0.5,
+                            this.cameras.main.height * 0.75,
+                            "qr",
+                        );
+                    };
+                })
+                .catch(console.error);
+
+            onMobileConnected(() => {
+                console.log("Phone connected!");
+
+                this.scene.start("Game");
+            });
+        });
     }
 
     private createSettingRow(
