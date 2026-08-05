@@ -44,7 +44,11 @@ export class Game extends Scene {
     camera: Phaser.Cameras.Scene2D.Camera;
     background: Phaser.GameObjects.Image;
     scoreText: Phaser.GameObjects.Text;
+    healthBar: number = 3;
+    maxHealth: number = 3;
     score: number = 0;
+
+    private heartIcons: Phaser.GameObjects.Image[] = [];
 
     private blade!: Blade;
     private isPointerDown = false;
@@ -57,6 +61,8 @@ export class Game extends Scene {
         "watermelon",
         "pineapple",
     ];
+
+    private hazardKeys = ["bomb"];
 
     private spawnables!: Phaser.Physics.Arcade.Group;
 
@@ -90,6 +96,8 @@ export class Game extends Scene {
             .setColor("Yellow")
             .setScale(1.4)
             .setDepth(200);
+
+        this.createHealthBar();
 
         this.blade = new Blade(this);
         this.setupBladeInput();
@@ -145,9 +153,15 @@ export class Game extends Scene {
             );
 
             if (hit) {
+                const isBomb = obj.getData("isHazard");
                 const sliceDx = segment.x2 - segment.x1;
                 const sliceDy = segment.y2 - segment.y1;
-                this.sliceFruit(obj, sliceDx, sliceDy);
+
+                if (isBomb) {
+                    this.sliceBomb(obj);
+                } else {
+                    this.sliceFruit(obj, sliceDx, sliceDy);
+                }
             }
         });
     }
@@ -279,9 +293,85 @@ export class Game extends Scene {
         });
     }
 
+    private sliceBomb(bomb: Phaser.Physics.Arcade.Image) {
+        bomb.setData("sliced", true);
+
+        const bombPenalty = 300;
+        this.score -= bombPenalty;
+        this.scoreText.setText(`Score: ${this.score}`);
+
+        this.cameras.main.shake(200, 0.01);
+        this.decreaseHealth();
+
+        const explosion = this.add
+            .image(bomb.x, bomb.y, "explosion")
+            .setScale(0.3)
+            .setDepth(20);
+
+        this.tweens.add({
+            targets: explosion,
+            scale: explosion.scale * 1.8,
+            alpha: 0,
+            duration: 350,
+            ease: "Sine.easeOut",
+            onComplete: () => explosion.destroy(),
+        });
+
+        bomb.destroy();
+    }
+
+    // ------------------------------------------------------------------
+    // HEALTH BAR
+    // ------------------------------------------------------------------
+    createHealthBar() {
+        const { width, height } = this.cameras.main;
+
+        const marginTop = height * 0.02;
+        const rightOffset = width * 0.015;
+
+        const heartSizeFraction = 0.06;
+        const heartSize = width * heartSizeFraction;
+
+        this.heartIcons = [];
+
+        for (let i = 0; i < this.maxHealth; i++) {
+            const slotX = width + rightOffset - i * marginTop * 2;
+
+            const heart = this.add
+                .image(slotX, marginTop, "heart_full")
+                .setOrigin(1, 0)
+                .setDisplaySize(heartSize, heartSize)
+                .setScrollFactor(0)
+                .setDepth(200);
+
+            this.heartIcons.push(heart);
+        }
+    }
+
+    updateHealthBar() {
+        this.heartIcons.forEach((heart, i) => {
+            heart.setTexture(i < this.healthBar ? "heart_full" : "heart_empty");
+        });
+    }
+
     increaseScore() {
         this.score += 100;
         this.scoreText.setText(`Score: ${this.score}`);
+    }
+
+    decreaseScore() {
+        this.score -= 500;
+        this.scoreText.setText(`Score: ${this.score}`);
+        this.decreaseHealth();
+    }
+
+    decreaseHealth() {
+        this.healthBar--;
+        this.updateHealthBar();
+
+        if (this.healthBar <= 0) {
+            this.changeScene();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -294,7 +384,12 @@ export class Game extends Scene {
         const x = Phaser.Math.Between(margin, width - margin);
         const y = height + 50;
 
-        const key = Phaser.Utils.Array.GetRandom(this.fruitKeys);
+        const bombChance = 0.15;
+        const isBomb = Math.random() < bombChance;
+
+        const key = isBomb
+            ? Phaser.Utils.Array.GetRandom(this.hazardKeys)
+            : Phaser.Utils.Array.GetRandom(this.fruitKeys);
 
         const item = this.physics.add.image(x, y, key).setScale(0.3);
         this.spawnables.add(item);
@@ -316,6 +411,7 @@ export class Game extends Scene {
 
         item.setData("checkOffscreen", true);
         item.setData("sliced", false);
+        item.setData("isHazard", isBomb);
     }
 
     update(_time: number, delta: number) {
@@ -326,6 +422,13 @@ export class Game extends Scene {
             if (!obj.active) return;
 
             if (obj.y > this.cameras.main.height + 100) {
+                const wasSliced = obj.getData("sliced");
+                const isHazard = obj.getData("isHazard");
+
+                if (!wasSliced && !isHazard) {
+                    this.decreaseScore();
+                }
+
                 obj.destroy();
             }
         });
