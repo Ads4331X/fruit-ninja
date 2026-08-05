@@ -47,6 +47,27 @@ export class Preloader extends Scene {
 
         this.load.image("explosion", "explosion.png");
 
+        this.load.setPath("assets/Sound");
+        this.load.audio("slice1", "Sword-swipe-1.wav");
+        this.load.audio("slice2", "Sword-swipe-2.wav");
+        this.load.audio("slice3", "Clean-Slice-1.wav");
+        this.load.audio("slice4", "Clean-Slice-2.wav");
+
+        this.load.audio("impact_apple", "Impact-Apple.wav");
+        this.load.audio("impact_banana", "Impact-Banana.wav");
+        this.load.audio("impact_orange", "Impact-Orange.wav");
+        this.load.audio("impact_coconut", "Impact-Coconut.wav");
+        this.load.audio("impact_watermelon", "Impact-Watermelon.wav");
+        this.load.audio("impact_pineapple", "Impact-Pineapple.wav");
+
+        this.load.audio("splatter1", "Splatter-Small-1.wav");
+        this.load.audio("splatter2", "Splatter-Medium-1.wav");
+
+        this.load.audio("bomb_explode", "Bomb-explode.wav");
+        this.load.audio("game_start", "Game-start.wav");
+        this.load.audio("game_over", "Game-over.wav");
+        this.load.audio("bgm", "Combo-Blitz-Backing.wav");
+
         this.load.setPath("assets");
         this.load.image("heart_full", "heart.png");
         this.load.image("heart_empty", "empty_heart.png");

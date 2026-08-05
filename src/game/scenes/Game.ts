@@ -2,6 +2,7 @@ import { EventBus } from "../EventBus";
 import { Scene } from "phaser";
 import * as Phaser from "phaser";
 import { Blade } from "./Blade";
+import { GameSettings } from "./GameSettings";
 
 function segmentIntersectsCircle(
     x1: number,
@@ -52,6 +53,12 @@ export class Game extends Scene {
 
     private blade!: Blade;
     private isPointerDown = false;
+    private bgm!: Phaser.Sound.BaseSound;
+    private unsubscribeSettings?: () => void;
+
+    private lastWhooshTime = 0;
+    private whooshCooldown = 250;
+    private minSwipeSpeed = 300;
 
     private fruitKeys = [
         "apple",
@@ -63,6 +70,18 @@ export class Game extends Scene {
     ];
 
     private hazardKeys = ["bomb"];
+
+    private sliceKeys = ["slice1", "slice2", "slice3", "slice4"];
+    private splatterKeys = ["splatter1", "splatter2"];
+
+    private fruitImpactMap: Record<string, string> = {
+        apple: "impact_apple",
+        banana: "impact_banana",
+        orange: "impact_orange",
+        coconut: "impact_coconut",
+        watermelon: "impact_watermelon",
+        pineapple: "impact_pineapple",
+    };
 
     private spawnables!: Phaser.Physics.Arcade.Group;
 
@@ -103,7 +122,41 @@ export class Game extends Scene {
         this.setupBladeInput();
         this.hideSystemCursor();
 
+        this.playSfx("game_start", { volume: 0.7 });
+
+        if (this.cache.audio.exists("bgm")) {
+            this.bgm = this.sound.add("bgm", { loop: true, volume: 0.35 });
+            this.bgm.play();
+            this.applyMusicMute();
+        }
+
+        // Keep bgm mute state in sync if the player changes it from the
+        // Settings scene (or anywhere else) while this scene is active.
+        this.unsubscribeSettings = GameSettings.onChange(() =>
+            this.applyMusicMute(),
+        );
+        this.events.once("shutdown", () => this.unsubscribeSettings?.());
+
         EventBus.emit("current-scene-ready", this);
+    }
+
+    // ------------------------------------------------------------------
+    // AUDIO / SETTINGS
+    // ------------------------------------------------------------------
+    /** Plays a one-shot sound effect, respecting the sfx mute setting. */
+    private playSfx(key: string, config?: Phaser.Types.Sound.SoundConfig) {
+        if (GameSettings.sfxMuted) return;
+        if (this.cache.audio.exists(key)) {
+            this.sound.play(key, config);
+        }
+    }
+
+    private applyMusicMute() {
+        if (this.bgm && "setMute" in this.bgm) {
+            (this.bgm as Phaser.Sound.WebAudioSound).setMute(
+                GameSettings.musicMuted,
+            );
+        }
     }
 
     // ------------------------------------------------------------------
@@ -121,6 +174,10 @@ export class Game extends Scene {
         this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
             this.blade.addPoint(pointer.x, pointer.y);
 
+            if (pointer.isDown) {
+                this.tryPlayWhoosh(pointer);
+            }
+
             if (this.isPointerDown || pointer.isDown) {
                 this.checkSlice();
             }
@@ -129,6 +186,19 @@ export class Game extends Scene {
 
     private hideSystemCursor() {
         this.input.setDefaultCursor("none");
+    }
+
+    private tryPlayWhoosh(pointer: Phaser.Input.Pointer) {
+        const now = this.time.now;
+        if (now - this.lastWhooshTime < this.whooshCooldown) return;
+
+        const speed = Math.hypot(pointer.velocity.x, pointer.velocity.y);
+        if (speed < this.minSwipeSpeed) return;
+
+        this.lastWhooshTime = now;
+
+        const whooshKey = Phaser.Utils.Array.GetRandom(this.sliceKeys);
+        this.playSfx(whooshKey, { volume: 0.3 });
     }
 
     private checkSlice() {
@@ -175,6 +245,20 @@ export class Game extends Scene {
         this.increaseScore();
 
         const fruitKey = fruit.texture.key;
+
+        const sliceSound = Phaser.Utils.Array.GetRandom(this.sliceKeys);
+        this.playSfx(sliceSound, { volume: 0.5 });
+
+        const impactKey = this.fruitImpactMap[fruitKey];
+        if (impactKey) {
+            this.playSfx(impactKey, { volume: 0.6 });
+        }
+
+        const splatterSound = Phaser.Utils.Array.GetRandom(this.splatterKeys);
+        this.time.delayedCall(40, () => {
+            this.playSfx(splatterSound, { volume: 0.4 });
+        });
+
         const x = fruit.x;
         const y = fruit.y;
         const currentVelocity =
@@ -296,6 +380,17 @@ export class Game extends Scene {
     private sliceBomb(bomb: Phaser.Physics.Arcade.Image) {
         bomb.setData("sliced", true);
 
+        this.playSfx("bomb_explode", { volume: 0.9 });
+
+        // duck bgm briefly so the explosion cuts through clearly
+        if (this.bgm && "setVolume" in this.bgm) {
+            const webAudioBgm = this.bgm as Phaser.Sound.WebAudioSound;
+            webAudioBgm.setVolume(0.1);
+            this.time.delayedCall(600, () => {
+                if (this.bgm.isPlaying) webAudioBgm.setVolume(0.35);
+            });
+        }
+
         const bombPenalty = 300;
         this.score -= bombPenalty;
         this.scoreText.setText(`Score: ${this.score}`);
@@ -370,6 +465,8 @@ export class Game extends Scene {
         this.updateHealthBar();
 
         if (this.healthBar <= 0) {
+            this.playSfx("game_over", { volume: 0.8 });
+            this.bgm?.stop();
             this.changeScene();
         }
     }
