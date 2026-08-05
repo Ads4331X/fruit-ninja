@@ -1,12 +1,14 @@
 import { Boot } from "./scenes/Boot";
+import { MainMenu } from "./scenes/MainMenu";
 import { AUTO, Game } from "phaser";
+import { Preloader } from "./scenes/Preloader";
 
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
     width: window.innerWidth,
     height: window.innerHeight,
     parent: "game-container",
-    scene: [Boot],
+    scene: [Boot, Preloader, MainMenu],
     physics: {
         default: "arcade",
         arcade: {
