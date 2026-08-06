@@ -152,7 +152,16 @@ export default function MobileController() {
     }
 
     function handleRecenter() {
-        centerRef.current = null; // next orientation reading re-centers
+        // Reset the calibration center so the phone's current orientation
+        // becomes the new "middle".
+        centerRef.current = null;
+        // Also reset the smoothed position and the displayed dot back to
+        // the center, otherwise the blade stays wherever it was and the
+        // recenter button appears to do nothing.
+        positionRef.current = { x: 0.5, y: 0.5 }; // cursor back to center
+        setDot({ x: 0.5, y: 0.5 });
+        // Let the desktop know the blade moved to center immediately.
+        connRef.current?.send({ type: "move", x: 0.5, y: 0.5 });
     }
 
     useEffect(() => {
