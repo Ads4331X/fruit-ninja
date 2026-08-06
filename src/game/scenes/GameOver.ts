@@ -1,5 +1,6 @@
 import { EventBus } from "../EventBus";
 import { Scene } from "phaser";
+import * as Phaser from "phaser";
 
 export class GameOver extends Scene {
     camera: Phaser.Cameras.Scene2D.Camera;
@@ -98,8 +99,9 @@ export class GameOver extends Scene {
 
     /**
      * Rounded, filled panel button with hover-grow / press-shrink feedback.
-     * Built from a Graphics rect + Text inside a Container so it reads as a
-     * proper UI button rather than plain text with a background color.
+     * Fires on pointerdown (not pointerup) with a padded hit area, since on
+     * touch a release that drifts even slightly outside a tight hit box
+     * would otherwise silently swallow the tap.
      */
     private createButton(
         x: number,
@@ -111,6 +113,7 @@ export class GameOver extends Scene {
         const w = 220;
         const h = 56;
         const radius = 14;
+        const hitPadding = 12; // extra forgiving tap area on touch devices
 
         const bg = this.add.graphics();
         bg.fillStyle(color, 1);
@@ -130,17 +133,26 @@ export class GameOver extends Scene {
         container.setSize(w, h);
         container.setInteractive({
             useHandCursor: true,
-            hitArea: new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
+            hitArea: new Phaser.Geom.Rectangle(
+                -w / 2 - hitPadding,
+                -h / 2 - hitPadding,
+                w + hitPadding * 2,
+                h + hitPadding * 2,
+            ),
             hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         });
 
+        let fired = false;
+
         container.on("pointerover", () => container.setScale(1.06));
         container.on("pointerout", () => container.setScale(1));
-        container.on("pointerdown", () => container.setScale(0.95));
-        container.on("pointerup", () => {
-            container.setScale(1.06);
+        container.on("pointerdown", () => {
+            container.setScale(0.95);
+            if (fired) return;
+            fired = true;
             onClick();
         });
+        container.on("pointerup", () => container.setScale(1.06));
 
         return container;
     }

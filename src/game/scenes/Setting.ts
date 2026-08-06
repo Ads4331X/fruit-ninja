@@ -9,6 +9,12 @@ export class Setting extends Scene {
 
     private readonly toggleWidth = 90;
     private readonly toggleHeight = 44;
+    // onMobileConnected registers a listener on the shared desktopPeer
+    // instance, which lives outside this scene. Without this guard,
+    // clicking "Play on Mobile" more than once (e.g. after backing out
+    // and re-entering Settings) would stack duplicate listeners, each
+    // firing its own callback and possibly starting the Game scene twice.
+    private mobileListenerRegistered = false;
 
     constructor() {
         super("Setting");
@@ -38,18 +44,13 @@ export class Setting extends Scene {
         graphics.fillStyle(0x000000, 0.7);
         graphics.lineStyle(8, 0xffff00, 1);
 
-        // Calculate dimensions first to keep the code clean
         const rectWidth = this.cameras.main.width * 0.6;
         const rectHeight = this.cameras.main.height * 0.75;
 
-        // Subtract half the width and height from the screen center coordinates
         const rectX = this.cameras.main.width / 2 - rectWidth / 2;
         const rectY = this.cameras.main.height / 2 - rectHeight / 2;
 
-        // Draw the filled rectangle
         graphics.fillRoundedRect(rectX, rectY, rectWidth, rectHeight);
-
-        // Draw the border outline
         graphics.strokeRoundedRect(rectX, rectY, rectWidth, rectHeight);
 
         this.buildPanelContents(rectX, rectY, rectWidth, rectHeight);
@@ -222,6 +223,8 @@ export class Setting extends Scene {
 
             const connectUrl = `${baseUrl}/?id=${encodeURIComponent(id)}`;
 
+            console.log("[Setting] mobile connect URL:", connectUrl);
+
             QRCode.toDataURL(connectUrl)
                 .then((dataUrl: string) => {
                     const img = new Image();
@@ -239,9 +242,11 @@ export class Setting extends Scene {
                 })
                 .catch(console.error);
 
-            onMobileConnected(() => {
-                console.log("Phone connected!");
+            if (this.mobileListenerRegistered) return;
+            this.mobileListenerRegistered = true;
 
+            onMobileConnected(() => {
+                console.log("[Setting] Phone connected!");
                 this.scene.start("Game");
             });
         });
@@ -261,7 +266,6 @@ export class Setting extends Scene {
             .setInteractive({ useHandCursor: true });
 
         back.on("pointerdown", () => {
-            // NOTE: update "MainMenu" to whatever your actual menu scene key is.
             this.scene.start("MainMenu");
         });
     }

@@ -106,6 +106,14 @@ export class Game extends Scene {
     create() {
         this.camera = this.cameras.main;
 
+        // Phaser reuses this Scene instance across every "Play Again" /
+        // scene.start("Game") call - it does NOT re-run the constructor,
+        // so class field defaults (score = 0, healthBar = 3) only apply
+        // once, at boot. Without resetting here, each new game silently
+        // carries over whatever score/health was left from the last one.
+        this.score = 0;
+        this.healthBar = this.maxHealth;
+
         this.background = this.add
             .image(
                 this.cameras.main.centerX,
@@ -454,8 +462,7 @@ export class Game extends Scene {
         }
 
         const bombPenalty = 300;
-        this.score -= bombPenalty;
-        this.scoreText.setText(`Score: ${this.score}`);
+        this.addScore(-bombPenalty);
 
         this.cameras.main.shake(200, 0.01);
         this.decreaseHealth();
@@ -512,14 +519,13 @@ export class Game extends Scene {
     }
 
     increaseScore() {
-        this.score += 100;
-        this.scoreText.setText(`Score: ${this.score}`);
+        this.addScore(100);
     }
 
-    decreaseScore() {
-        this.score -= 500;
+    /** Applies a score delta and updates the HUD text. */
+    private addScore(delta: number) {
+        this.score += delta;
         this.scoreText.setText(`Score: ${this.score}`);
-        this.decreaseHealth();
     }
 
     decreaseHealth() {
@@ -593,7 +599,7 @@ export class Game extends Scene {
                 const isHazard = obj.getData("isHazard");
 
                 if (!wasSliced && !isHazard) {
-                    this.decreaseScore();
+                    this.decreaseHealth();
                 }
 
                 obj.destroy();
