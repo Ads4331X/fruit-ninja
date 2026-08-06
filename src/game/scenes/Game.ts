@@ -250,7 +250,7 @@ export class Game extends Scene {
         const clampedY = Phaser.Math.Clamp(bladePosition.y, -maxTilt, maxTilt);
 
         const screenX = width / 2 + (clampedX / maxTilt) * (width / 2);
-        const screenY = height / 2 + (clampedY / maxTilt) * (height / 2);
+        const screenY = height / 2 - (clampedY / maxTilt) * (height / 2);
 
         this.blade.addPoint(screenX, screenY);
         this.checkSlice();
