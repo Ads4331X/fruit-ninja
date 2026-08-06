@@ -23,10 +23,12 @@ export function getPeerID(): Promise<string> {
 }
 export function onMobileConnected(callback: (conn: any) => void) {
     desktopPeer.on("connection", (conn) => {
-        console.log("Mobile connected!");
-
         conn.on("open", () => {
-            callback(conn);
+            conn.on("data", (data: any) => {
+                if (data?.type === "ready") {
+                    callback(conn);
+                }
+            });
         });
     });
 }
