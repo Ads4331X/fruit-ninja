@@ -8,6 +8,7 @@ desktopPeer.on("open", (id) => {
     desktopID = id;
 });
 
+desktopPeer.on("error", (err) => console.log("desktop peer error:", err));
 export function getPeerID(): Promise<string> {
     return new Promise((resolve) => {
         if (desktopID) {
