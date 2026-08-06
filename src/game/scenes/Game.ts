@@ -577,7 +577,31 @@ export class Game extends Scene {
 
         const upwardSpeed = Math.sqrt(2 * effectiveGravityY * targetPeakHeight);
 
-        const maxSideways = Math.min(width * 0.12, 150);
+        // --- Horizontal drift safety (prevents fruit escaping off the
+        // left/right edges before it comes back down) -------------------
+        // Total time the fruit is airborne (up + back down): from
+        // v = g*t/2 solved for t.
+        const flightTime = (2 * upwardSpeed) / effectiveGravityY;
+
+        // Room actually available in each direction from this specific
+        // spawn x, so edge-spawned fruit gets a tighter cap than
+        // center-spawned fruit.
+        const roomLeft = x - margin;
+        const roomRight = width - margin - x;
+        const maxDriftDistance = Math.max(Math.min(roomLeft, roomRight), 0);
+
+        // Max sideways speed such that speed * flightTime never exceeds
+        // the available room. Also divide out speedMultiplier up front
+        // since it gets re-applied to sidewaysSpeed below - otherwise a
+        // high-difficulty multiplier could push the final speed back
+        // past the safe bound.
+        const maxSidewaysBySpace =
+            flightTime > 0
+                ? maxDriftDistance / flightTime / Math.max(speedMultiplier, 1)
+                : 0;
+
+        const maxSideways = Math.min(width * 0.12, 150, maxSidewaysBySpace);
+
         const sidewaysSpeed =
             Phaser.Math.Between(-maxSideways, maxSideways) * speedMultiplier;
 
