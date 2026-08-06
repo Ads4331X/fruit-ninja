@@ -23,12 +23,18 @@ export function getPeerID(): Promise<string> {
 }
 
 export const bladePosition = { x: 0, y: 0 };
+export let isMobileConnected = false;
+
+export function setMobileConnected(value: boolean) {
+    isMobileConnected = value;
+}
 
 export function onMobileConnected(callback: (conn: any) => void) {
     desktopPeer.on("connection", (conn) => {
         conn.on("open", () => {
             conn.on("data", (data: any) => {
                 if (data?.type === "ready") {
+                    isMobileConnected = true;
                     callback(conn);
                 } else if (data?.type === "move") {
                     bladePosition.x = data.x;

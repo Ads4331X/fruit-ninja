@@ -3,7 +3,7 @@ import { Scene } from "phaser";
 import * as Phaser from "phaser";
 import { Blade } from "./Blade";
 import { GameSettings } from "./GameSettings";
-import { bladePosition } from "./DesktopPeer";
+import { bladePosition, isMobileConnected } from "./DesktopPeer";
 
 function segmentIntersectsCircle(
     x1: number,
@@ -242,6 +242,8 @@ export class Game extends Scene {
     }
 
     private updateBladeFromMobile() {
+        if (!isMobileConnected) return;
+
         const { width, height } = this.cameras.main;
         const maxTilt = 45;
         const clampedX = Phaser.Math.Clamp(bladePosition.x, -maxTilt, maxTilt);
