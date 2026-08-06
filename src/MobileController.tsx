@@ -6,35 +6,55 @@ export default function MobileController() {
     const peerId = String(param.get("id"));
     const connRef = useRef<any>(null);
 
-    type Status = "connecting" | "connected" | "active";
+    type Status = "connecting" | "connected" | "active" | "try again";
     const [status, setStatus] = useState<Status>("connecting");
 
-    useEffect(() => {
-        async function connect() {
-            const result = await connectToDesktop(peerId);
+    async function connect() {
+        setStatus("connecting");
+        try {
+            const result = await Promise.race([
+                connectToDesktop(peerId),
+                new Promise((_, reject) =>
+                    setTimeout(
+                        () => reject(new Error("connection timed out")),
+                        5000,
+                    ),
+                ),
+            ]);
             connRef.current = result;
             setStatus("connected");
+        } catch (err) {
+            console.error("connection failed:", err);
+            setStatus("try again");
         }
+    }
+
+    useEffect(() => {
         connect();
     }, []);
 
     async function handleEnableMotion() {
-        // iOS requires this permission request, triggered directly by a tap
         if (
             "DeviceOrientationEvent" in window &&
             typeof (window as any).DeviceOrientationEvent.requestPermission ===
                 "function"
         ) {
+            console.log("requesting permission...");
             const permission = await (
                 window as any
             ).DeviceOrientationEvent.requestPermission();
+            console.log("permission result:", permission);
             if (permission !== "granted") return;
+        } else {
+            console.log("requestPermission not available on this device");
         }
         setStatus("active");
-        // motion listener setup goes here next
+        connRef.current.send({ type: "ready" });
     }
 
     if (status === "connecting") return "Connecting...";
+    if (status === "try again")
+        return <button onClick={connect}>Try Again</button>;
     if (status === "connected")
         return <button onClick={handleEnableMotion}>Tap to Start</button>;
     return "Connected — go slice!";

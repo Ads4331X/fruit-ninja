@@ -216,7 +216,11 @@ export class Setting extends Scene {
         bg.on("pointerdown", async () => {
             const id = await getPeerID();
 
-            const connectUrl = `http://192.168.1.72:8080/?id=${encodeURIComponent(id)}`;
+            const baseUrl =
+                (import.meta.env.VITE_MOBILE_BASE_URL as string) ||
+                window.location.origin;
+
+            const connectUrl = `${baseUrl}/?id=${encodeURIComponent(id)}`;
 
             QRCode.toDataURL(connectUrl)
                 .then((dataUrl: string) => {
