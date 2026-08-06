@@ -50,10 +50,6 @@ export class Game extends Scene {
     maxHealth: number = 3;
     score: number = 0;
 
-    // private lastMobileX: number | null = null;
-    // private lastMobileY: number | null = null;
-    // private lastMobileMoveTime = 0;
-
     private heartIcons: Phaser.GameObjects.Image[] = [];
 
     private blade!: Blade;
@@ -98,11 +94,8 @@ export class Game extends Scene {
     // ------------------------------------------------------------------
     // DIFFICULTY SCALING CONFIG
     // ------------------------------------------------------------------
-    // Score at which difficulty reaches its maximum (100% ramped).
     private difficultyRampScore = 8000;
-    // How much faster fruits move (launch/fall speed) at max difficulty.
     private maxSpeedMultiplier = 1.8;
-    // Spawn cadence: starts at baseSpawnDelay ms, eases down to minSpawnDelay ms.
     private baseSpawnDelay = 1000;
     private minSpawnDelay = 420;
 
@@ -156,7 +149,14 @@ export class Game extends Scene {
         this.unsubscribeSettings = GameSettings.onChange(() =>
             this.applyMusicMute(),
         );
-        this.events.once("shutdown", () => this.unsubscribeSettings?.());
+
+        // The default cursor is a shared input-manager setting, not scoped
+        // to this scene, so it must be explicitly restored on shutdown or
+        // every scene after Game (GameOver, MainMenu, ...) inherits "none".
+        this.events.once("shutdown", () => {
+            this.unsubscribeSettings?.();
+            this.input.setDefaultCursor("default");
+        });
 
         EventBus.emit("current-scene-ready", this);
     }
@@ -164,7 +164,6 @@ export class Game extends Scene {
     // ------------------------------------------------------------------
     // AUDIO / SETTINGS
     // ------------------------------------------------------------------
-    /** Plays a one-shot sound effect, respecting the sfx mute setting. */
     private playSfx(key: string, config?: Phaser.Types.Sound.SoundConfig) {
         if (GameSettings.sfxMuted) return;
         if (this.cache.audio.exists(key)) {
@@ -183,7 +182,6 @@ export class Game extends Scene {
     // ------------------------------------------------------------------
     // DIFFICULTY
     // ------------------------------------------------------------------
-    /** 0 -> 1 progress toward max difficulty, eased with smoothstep for a gradual ramp. */
     private getDifficultyProgress(): number {
         const raw = Phaser.Math.Clamp(
             this.score / this.difficultyRampScore,
@@ -193,24 +191,16 @@ export class Game extends Scene {
         return raw * raw * (3 - 2 * raw); // smoothstep easing
     }
 
-    /** Multiplier applied to fruit launch/fall speed. 1 = base speed. */
     private getSpeedMultiplier(): number {
         const t = this.getDifficultyProgress();
         return 1 + t * (this.maxSpeedMultiplier - 1);
     }
 
-    /** Spawn timer delay in ms, eased down as difficulty increases. */
     private getSpawnDelay(): number {
         const t = this.getDifficultyProgress();
         return Phaser.Math.Linear(this.baseSpawnDelay, this.minSpawnDelay, t);
     }
 
-    /**
-     * TimerEvent.delay is read-only in current Phaser versions, so instead
-     * we scale how fast the timer's internal clock progresses via timeScale.
-     * timeScale = baseSpawnDelay / desiredDelay, e.g. desiredDelay shrinking
-     * toward minSpawnDelay makes timeScale grow above 1, firing more often.
-     */
     private applySpawnRate() {
         const desiredDelay = this.getSpawnDelay();
         this.spawnTimer.timeScale = this.baseSpawnDelay / desiredDelay;
@@ -241,16 +231,17 @@ export class Game extends Scene {
         });
     }
 
+    /**
+     * bladePosition.x/y are now 0-1 fractions of the mobile touchpad area
+     * (see MobileController.tsx), mapped directly onto the game canvas -
+     * simpler and far more predictable than device-tilt.
+     */
     private updateBladeFromMobile() {
         if (!isMobileConnected) return;
 
         const { width, height } = this.cameras.main;
-        const maxTilt = 45;
-        const clampedX = Phaser.Math.Clamp(bladePosition.x, -maxTilt, maxTilt);
-        const clampedY = Phaser.Math.Clamp(bladePosition.y, -maxTilt, maxTilt);
-
-        const screenX = width / 2 + (clampedX / maxTilt) * (width / 2);
-        const screenY = height / 2 - (clampedY / maxTilt) * (height / 2);
+        const screenX = Phaser.Math.Clamp(bladePosition.x, 0, 1) * width;
+        const screenY = Phaser.Math.Clamp(bladePosition.y, 0, 1) * height;
 
         this.blade.addPoint(screenX, screenY);
         this.checkSlice();
@@ -454,7 +445,6 @@ export class Game extends Scene {
 
         this.playSfx("bomb_explode", { volume: 0.9 });
 
-        // duck bgm briefly so the explosion cuts through clearly
         if (this.bgm && "setVolume" in this.bgm) {
             const webAudioBgm = this.bgm as Phaser.Sound.WebAudioSound;
             webAudioBgm.setVolume(0.1);
@@ -563,7 +553,6 @@ export class Game extends Scene {
         const item = this.physics.add.image(x, y, key).setScale(0.3);
         this.spawnables.add(item);
 
-        // --- Difficulty-scaled speed, height stays capped exactly as before ---
         const speedMultiplier = this.getSpeedMultiplier();
         const worldGravityY = this.physics.world.gravity.y || 800;
         const effectiveGravityY = worldGravityY * speedMultiplier;
@@ -573,9 +562,6 @@ export class Game extends Scene {
         const targetPeakHeight =
             height * Phaser.Math.FloatBetween(minPeakFraction, maxPeakFraction);
 
-        // h = v^2 / (2g). Solving for v using the SAME targetPeakHeight while
-        // gravity is scaled up keeps the max spawn/peak height unchanged, but
-        // makes the whole arc (ascent + descent) play out faster.
         const upwardSpeed = Math.sqrt(2 * effectiveGravityY * targetPeakHeight);
 
         const maxSideways = Math.min(width * 0.12, 150);
@@ -585,15 +571,12 @@ export class Game extends Scene {
         item.setVelocity(sidewaysSpeed, -upwardSpeed);
         item.setAngularVelocity(Phaser.Math.Between(-200, 200));
 
-        // Arcade Physics adds body gravity ON TOP of world gravity, so only
-        // set the extra amount needed to reach effectiveGravityY overall.
         item.setGravityY(effectiveGravityY - worldGravityY);
 
         item.setData("checkOffscreen", true);
         item.setData("sliced", false);
         item.setData("isHazard", isBomb);
 
-        // Ramp spawn cadence smoothly with difficulty too ("overall game speed").
         this.applySpawnRate();
     }
 
@@ -619,7 +602,7 @@ export class Game extends Scene {
     }
 
     changeScene() {
-        this.scene.start("GameOver");
+        this.scene.start("GameOver", { score: this.score });
     }
 }
 

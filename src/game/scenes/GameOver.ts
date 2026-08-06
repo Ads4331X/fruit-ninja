@@ -53,9 +53,9 @@ export class GameOver extends Scene {
 
         const playAgainBtn = this.createButton(
             0,
-            40,
+            50,
             "Play Again",
-            "#2ecc71",
+            0x2ecc71,
             () => {
                 this.scene.start("Game");
             },
@@ -63,9 +63,9 @@ export class GameOver extends Scene {
 
         const mainMenuBtn = this.createButton(
             0,
-            110,
+            130,
             "Main Menu",
-            "#4a90e2",
+            0x4a90e2,
             () => {
                 this.scene.start("MainMenu");
             },
@@ -88,36 +88,61 @@ export class GameOver extends Scene {
             ease: "Sine.easeOut",
         });
 
+        // Make sure the pointer is visible here even if the previous scene
+        // (Game) forgot to restore it — belt-and-braces on top of the
+        // shutdown-handler fix in Game.ts.
+        this.input.setDefaultCursor("default");
+
         EventBus.emit("current-scene-ready", this);
     }
 
+    /**
+     * Rounded, filled panel button with hover-grow / press-shrink feedback.
+     * Built from a Graphics rect + Text inside a Container so it reads as a
+     * proper UI button rather than plain text with a background color.
+     */
     private createButton(
         x: number,
         y: number,
         label: string,
-        color: string,
+        color: number,
         onClick: () => void,
-    ): Phaser.GameObjects.Text {
-        const btn = this.add
-            .text(x, y, label, {
-                fontFamily: "Arial",
-                fontSize: 32,
-                color: "#ffffff",
-                backgroundColor: color,
-                padding: { left: 24, right: 24, top: 12, bottom: 12 },
-            })
-            .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true });
+    ): Phaser.GameObjects.Container {
+        const w = 220;
+        const h = 56;
+        const radius = 14;
 
-        btn.on("pointerover", () => btn.setScale(1.08));
-        btn.on("pointerout", () => btn.setScale(1));
-        btn.on("pointerdown", () => btn.setScale(0.95));
-        btn.on("pointerup", () => {
-            btn.setScale(1.08);
+        const bg = this.add.graphics();
+        bg.fillStyle(color, 1);
+        bg.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
+        bg.lineStyle(2, 0xffffff, 0.35);
+        bg.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
+
+        const text = this.add
+            .text(0, 0, label, {
+                fontFamily: "Arial",
+                fontSize: 28,
+                color: "#ffffff",
+            })
+            .setOrigin(0.5);
+
+        const container = this.add.container(x, y, [bg, text]);
+        container.setSize(w, h);
+        container.setInteractive({
+            useHandCursor: true,
+            hitArea: new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        });
+
+        container.on("pointerover", () => container.setScale(1.06));
+        container.on("pointerout", () => container.setScale(1));
+        container.on("pointerdown", () => container.setScale(0.95));
+        container.on("pointerup", () => {
+            container.setScale(1.06);
             onClick();
         });
 
-        return btn;
+        return container;
     }
 }
 

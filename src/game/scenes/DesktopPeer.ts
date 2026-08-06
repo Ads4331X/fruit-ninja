@@ -9,6 +9,7 @@ desktopPeer.on("open", (id) => {
 });
 
 desktopPeer.on("error", (err) => console.log("desktop peer error:", err));
+
 export function getPeerID(): Promise<string> {
     return new Promise((resolve) => {
         if (desktopID) {
@@ -22,7 +23,10 @@ export function getPeerID(): Promise<string> {
     });
 }
 
-export const bladePosition = { x: 0, y: 0 };
+// bladePosition is a 0-1 fraction of the mobile touchpad area, sent by
+// MobileController.tsx on every touchmove. Game.ts multiplies it by the
+// canvas width/height directly - no tilt calibration involved.
+export const bladePosition = { x: 0.5, y: 0.5 };
 export let isMobileConnected = false;
 
 export function setMobileConnected(value: boolean) {
