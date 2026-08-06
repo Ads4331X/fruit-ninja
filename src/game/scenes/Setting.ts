@@ -216,10 +216,12 @@ export class Setting extends Scene {
         bg.on("pointerdown", async () => {
             const id = await getPeerID();
 
-            QRCode.toDataURL(id)
-                .then((url: string) => {
+            const connectUrl = `http://192.168.1.72:8080/?id=${encodeURIComponent(id)}`;
+
+            QRCode.toDataURL(connectUrl)
+                .then((dataUrl: string) => {
                     const img = new Image();
-                    img.src = url;
+                    img.src = dataUrl;
 
                     img.onload = () => {
                         this.textures.addImage("qr", img);
