@@ -3,6 +3,7 @@ import { Scene } from "phaser";
 import * as Phaser from "phaser";
 import { Blade } from "./Blade";
 import { GameSettings } from "./GameSettings";
+import { bladePosition } from "./DesktopPeer";
 
 function segmentIntersectsCircle(
     x1: number,
@@ -48,6 +49,10 @@ export class Game extends Scene {
     healthBar: number = 3;
     maxHealth: number = 3;
     score: number = 0;
+
+    // private lastMobileX: number | null = null;
+    // private lastMobileY: number | null = null;
+    // private lastMobileMoveTime = 0;
 
     private heartIcons: Phaser.GameObjects.Image[] = [];
 
@@ -234,6 +239,19 @@ export class Game extends Scene {
                 this.checkSlice();
             }
         });
+    }
+
+    private updateBladeFromMobile() {
+        const { width, height } = this.cameras.main;
+        const maxTilt = 45;
+        const clampedX = Phaser.Math.Clamp(bladePosition.x, -maxTilt, maxTilt);
+        const clampedY = Phaser.Math.Clamp(bladePosition.y, -maxTilt, maxTilt);
+
+        const screenX = width / 2 + (clampedX / maxTilt) * (width / 2);
+        const screenY = height / 2 + (clampedY / maxTilt) * (height / 2);
+
+        this.blade.addPoint(screenX, screenY);
+        this.checkSlice();
     }
 
     private hideSystemCursor() {
@@ -579,6 +597,7 @@ export class Game extends Scene {
 
     update(_time: number, delta: number) {
         this.blade.update(delta);
+        this.updateBladeFromMobile();
 
         this.spawnables.getChildren().forEach((child) => {
             const obj = child as Phaser.Physics.Arcade.Image;

@@ -21,12 +21,18 @@ export function getPeerID(): Promise<string> {
         });
     });
 }
+
+export const bladePosition = { x: 0, y: 0 };
+
 export function onMobileConnected(callback: (conn: any) => void) {
     desktopPeer.on("connection", (conn) => {
         conn.on("open", () => {
             conn.on("data", (data: any) => {
                 if (data?.type === "ready") {
                     callback(conn);
+                } else if (data?.type === "move") {
+                    bladePosition.x = data.x;
+                    bladePosition.y = data.y;
                 }
             });
         });

@@ -50,6 +50,32 @@ export default function MobileController() {
         }
         setStatus("active");
         connRef.current.send({ type: "ready" });
+
+        let lastSent = 0;
+        let centerGamma: number | null = null;
+        let centerBeta: number | null = null;
+
+        function handleOrientation(event: DeviceOrientationEvent) {
+            const gamma = event.gamma ?? 0;
+            const beta = event.beta ?? 0;
+
+            if (centerGamma === null) {
+                centerGamma = gamma;
+                centerBeta = beta;
+                return;
+            }
+            const now = Date.now();
+            if (now - lastSent < 30) return;
+            lastSent = now;
+
+            connRef.current?.send({
+                type: "move",
+                x: gamma - centerGamma,
+                y: beta - (centerBeta as number),
+            });
+        }
+
+        window.addEventListener("deviceorientation", handleOrientation);
     }
 
     if (status === "connecting") return "Connecting...";
