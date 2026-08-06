@@ -29,6 +29,12 @@ export function getPeerID(): Promise<string> {
 export const bladePosition = { x: 0.5, y: 0.5 };
 export let isMobileConnected = false;
 
+/** Reset the blade back to the center of the screen (0.5, 0.5). */
+export function resetBladePosition() {
+    bladePosition.x = 0.5;
+    bladePosition.y = 0.5;
+}
+
 export function setMobileConnected(value: boolean) {
     isMobileConnected = value;
 }

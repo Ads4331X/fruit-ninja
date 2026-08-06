@@ -149,6 +149,9 @@ export default function MobileController() {
         attachOrientationListener();
         setStatus("active");
         connRef.current?.send({ type: "ready" });
+        // Tell the desktop to place the blade at the center immediately so
+        // it doesn't start from wherever it was left last time.
+        connRef.current?.send({ type: "move", x: 0.5, y: 0.5 });
     }
 
     function handleRecenter() {

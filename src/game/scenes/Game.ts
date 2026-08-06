@@ -3,7 +3,11 @@ import { Scene } from "phaser";
 import * as Phaser from "phaser";
 import { Blade } from "./Blade";
 import { GameSettings } from "./GameSettings";
-import { bladePosition, isMobileConnected } from "./DesktopPeer";
+import {
+    bladePosition,
+    isMobileConnected,
+    resetBladePosition,
+} from "./DesktopPeer";
 
 function segmentIntersectsCircle(
     x1: number,
@@ -113,6 +117,9 @@ export class Game extends Scene {
         // carries over whatever score/health was left from the last one.
         this.score = 0;
         this.healthBar = this.maxHealth;
+        // Start the blade at the center of the screen so it's easy to
+        // move initially, instead of wherever it was left last game.
+        resetBladePosition();
 
         this.background = this.add
             .image(
