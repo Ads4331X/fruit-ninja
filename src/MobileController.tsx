@@ -2,30 +2,27 @@ import { useEffect, useRef, useState } from "react";
 import { connectToDesktop } from "./game/scenes/MobilePeer";
 
 // ---------------------------------------------------------------------
-// RATE-CONTROL (velocity) GYRO SETTINGS
+// ABSOLUTE-POSITION GYRO SETTINGS
 //
-// Instead of mapping tilt to an absolute cursor position (which gets
-// "stuck" at the edges because you can't tilt the phone far enough to
-// reach the far corner), tilting now moves the cursor AT A SPEED in that
-// direction. Holding the phone (near) flat stops the cursor. This lets
-// you reach every part of the screen and never get stuck.
+// Tilt maps directly to an absolute blade position (like a mouse or a
+// real Fruit Ninja swipe). The blade follows exactly where you point the
+// phone. A large tilt range means you can reach every corner without the
+// blade getting stuck at an edge, and smoothing removes jitter so aiming
+// stays accurate.
 // ---------------------------------------------------------------------
 
-// Degrees of tilt (from the calibrated center) that produces maximum
-// cursor speed. Larger = slower/gentler cursor. Tune to taste.
-const MAX_TILT_DEG = 30;
+// Degrees of tilt (from the calibrated center) that maps to the edge of
+// the screen in one direction. Larger = you must tilt further to reach
+// the edge (less sensitive, more accurate aiming). Smaller = twitchier.
+const TILT_RANGE_DEG = 50;
 
-// Small tilts inside this dead zone are treated as "flat" (no movement),
-// so tiny trembles don't make the cursor creep around.
-const DEAD_ZONE_DEG = 4;
+// Small tilts inside this dead zone are treated as "center" so the blade
+// doesn't jitter when you're holding the phone still.
+const DEAD_ZONE_DEG = 2;
 
-// How fast the cursor travels across the full 0-1 pad per second at
-// maximum tilt. Lower = smoother/slower, higher = snappier.
-const MAX_SPEED_PER_SEC = 1.1;
-
-// Controls how quickly the cursor responds to a change in tilt. A value
-// closer to 0 = stiffer/smoother (more lag), closer to 1 = snappier.
-const SMOOTHING = 0.35;
+// Controls how quickly the blade responds to a change in tilt.
+// 0 = very floaty/smooth, 1 = instant but possibly jittery.
+const SMOOTHING = 0.6;
 
 export default function MobileController() {
     const param = new URLSearchParams(window.location.search);
@@ -41,10 +38,9 @@ export default function MobileController() {
         null,
     );
 
-    // Smoothed cursor position (0-1) kept in a ref so the loop can read
-    // and update it without re-rendering for every raw gyro sample.
+    // Smoothed cursor position (0-1) kept in a ref so the handler can
+    // read and update it without re-rendering for every raw gyro sample.
     const positionRef = useRef({ x: 0.5, y: 0.5 });
-    const lastTimeRef = useRef<number>(0);
 
     const [dot, setDot] = useState({ x: 0.5, y: 0.5 });
     const [motionSupported, setMotionSupported] = useState(true);
@@ -80,22 +76,9 @@ export default function MobileController() {
         return Math.min(1, Math.max(0, v));
     }
 
-    // Converts a tilt delta (degrees) into a normalized speed in [-1, 1],
-    // applying the dead zone so small tilts don't make the cursor creep.
-    function tiltToSpeed(deltaDeg: number): number {
-        const magnitude = Math.abs(deltaDeg);
-        if (magnitude < DEAD_ZONE_DEG) return 0;
-        const sign = deltaDeg < 0 ? -1 : 1;
-        const speed = Math.min(
-            1,
-            (magnitude - DEAD_ZONE_DEG) / (MAX_TILT_DEG - DEAD_ZONE_DEG),
-        );
-        return sign * speed;
-    }
-
     function attachOrientationListener() {
         const handler = (event: DeviceOrientationEvent) => {
-            const beta = event.beta ?? 0; // front-back tilt
+            const beta = event.beta ?? 0; // front-back tilt (up/down)
             const gamma = event.gamma ?? 0; // left-right tilt
 
             if (!centerRef.current) {
@@ -105,26 +88,21 @@ export default function MobileController() {
                 return;
             }
 
-            const now = performance.now();
-            const dt = lastTimeRef.current
-                ? (now - lastTimeRef.current) / 1000
-                : 1 / 60;
-            lastTimeRef.current = now;
-
             const dGamma = gamma - centerRef.current.gamma; // left/right
             const dBeta = beta - centerRef.current.beta; // up/down
 
-            // Rate control: tilt sets cursor VELOCITY, not position. This
-            // lets the cursor reach every corner and never get stuck.
-            const speedX = tiltToSpeed(dGamma);
-            const speedY = tiltToSpeed(dBeta);
+            // Absolute positioning: map tilt directly to a 0-1 blade
+            // position. Apply a small dead zone so holding still doesn't
+            // jitter, then smooth toward it for accurate aiming.
+            let targetX = 0.5 + dGamma / (TILT_RANGE_DEG * 2);
+            let targetY = 0.5 + dBeta / (TILT_RANGE_DEG * 2);
 
-            const maxStep = MAX_SPEED_PER_SEC * dt;
-            const targetX = positionRef.current.x + speedX * maxStep;
-            const targetY = positionRef.current.y + speedY * maxStep;
+            if (Math.abs(dGamma) < DEAD_ZONE_DEG) targetX = 0.5;
+            if (Math.abs(dBeta) < DEAD_ZONE_DEG) targetY = 0.5;
 
             // Exponential low-pass filter: glide toward the target rather
-            // than jumping, which removes gyro jitter and feels smoother.
+            // than jumping, which removes gyro jitter while keeping the
+            // blade following your hand accurately.
             positionRef.current.x +=
                 (targetX - positionRef.current.x) * SMOOTHING;
             positionRef.current.y +=
@@ -167,7 +145,6 @@ export default function MobileController() {
 
         centerRef.current = null; // recalibrate on start
         positionRef.current = { x: 0.5, y: 0.5 }; // cursor starts at center
-        lastTimeRef.current = 0;
         setDot({ x: 0.5, y: 0.5 });
         attachOrientationListener();
         setStatus("active");
@@ -176,7 +153,6 @@ export default function MobileController() {
 
     function handleRecenter() {
         centerRef.current = null; // next orientation reading re-centers
-        lastTimeRef.current = 0;
     }
 
     useEffect(() => {
