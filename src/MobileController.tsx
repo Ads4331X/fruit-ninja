@@ -14,15 +14,16 @@ import { connectToDesktop } from "./game/scenes/MobilePeer";
 // Degrees of tilt (from the calibrated center) that maps to the edge of
 // the screen in one direction. Larger = you must tilt further to reach
 // the edge (less sensitive, more accurate aiming). Smaller = twitchier.
-const TILT_RANGE_DEG = 50;
+const TILT_RANGE_DEG = 30;
 
 // Small tilts inside this dead zone are treated as "center" so the blade
 // doesn't jitter when you're holding the phone still.
-const DEAD_ZONE_DEG = 2;
+const DEAD_ZONE_DEG = 1.5;
 
 // Controls how quickly the blade responds to a change in tilt.
 // 0 = very floaty/smooth, 1 = instant but possibly jittery.
-const SMOOTHING = 0.6;
+// Higher values reduce perceived lag.
+const SMOOTHING = 0.8;
 
 export default function MobileController() {
     const param = new URLSearchParams(window.location.search);
