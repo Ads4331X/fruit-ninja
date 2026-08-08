@@ -327,18 +327,22 @@ export class MainMenu extends Scene {
         const configs: ButtonConfig[] = [
             { label: "PLAY", onClick: () => this.transitionToScene("Game") },
             {
-                label: "MULTIPLAYER",
-                onClick: () => this.transitionToScene("Multiplayer"),
-            },
-            {
                 label: "SETTINGS",
                 onClick: () => this.transitionToScene("Setting"),
             },
         ];
 
-        const centerX = this.cameras.main.centerX;
-        const startY = this.cameras.main.height * 0.5;
-        const spacing = 110;
+        const { width, height } = this.cameras.main;
+
+        // Buttons form a vertical stack, centered as a group in the lower
+        // portion of the screen (roughly the 62%–88% band). This keeps them
+        // clear of the logo above and — critically — clear of the bottom
+        // edge/safe-area below, instead of being pinned right against it.
+        const centerX = width / 2;
+        const spacing = Math.round(Phaser.Math.Clamp(height * 0.14, 90, 120));
+        const groupCenterY = height * 0.74;
+        const totalHeight = (configs.length - 1) * spacing;
+        const startY = groupCenterY - totalHeight / 2;
 
         configs.forEach((cfg, i) => {
             const btn = this.createAnimatedButton(
@@ -348,6 +352,18 @@ export class MainMenu extends Scene {
                 cfg.onClick,
             );
             this.buttons.push(btn);
+
+            // Subtle staggered entrance so the stack doesn't feel like it was
+            // just dropped in place.
+            btn.setScale(0.9).setAlpha(0);
+            this.tweens.add({
+                targets: btn,
+                scale: 1,
+                alpha: 1,
+                duration: 320,
+                delay: 120 + i * 90,
+                ease: "Back.easeOut",
+            });
         });
     }
 
@@ -359,13 +375,18 @@ export class MainMenu extends Scene {
     ): Phaser.GameObjects.Container {
         const container = this.add.container(x, y).setDepth(10);
 
-        const btnWidth = 300;
-        const btnHeight = 78;
+        // Width scales with the viewport (with sensible min/max) instead of
+        // a hard-coded 300px, so buttons don't overflow narrow screens or
+        // look undersized on wide ones.
+        const btnWidth = Math.round(
+            Phaser.Math.Clamp(this.cameras.main.width * 0.62, 220, 340),
+        );
+        const btnHeight = 74;
 
         const shadow = this.add.graphics();
-        shadow.fillStyle(0x000000, 0.35);
+        shadow.fillStyle(0x000000, 0.3);
         shadow.fillRoundedRect(
-            -btnWidth / 2 + 4,
+            -btnWidth / 2,
             -btnHeight / 2 + 6,
             btnWidth,
             btnHeight,
@@ -469,17 +490,35 @@ export class MainMenu extends Scene {
 
             this.tweens.add({
                 targets: container,
-                scale: 1.1,
+                scale: 1.08,
                 duration: 150,
                 ease: "Sine.easeOut",
             });
             gloss.setAlpha(0.3);
+            border.clear();
+            border.lineStyle(4, 0xffe1a3, 1);
+            border.strokeRoundedRect(
+                -btnWidth / 2,
+                -btnHeight / 2,
+                btnWidth,
+                btnHeight,
+                22,
+            );
 
             this.playSfx("ui_tap", { volume: 0.2 });
         });
 
         hitZone.on("pointerout", () => {
             gloss.setAlpha(1);
+            border.clear();
+            border.lineStyle(4, 0xf0c987, 1);
+            border.strokeRoundedRect(
+                -btnWidth / 2,
+                -btnHeight / 2,
+                btnWidth,
+                btnHeight,
+                22,
+            );
 
             this.tweens.add({
                 targets: container,
