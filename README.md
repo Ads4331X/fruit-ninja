@@ -1,246 +1,135 @@
-# Phaser React TypeScript Template
+# 🍉 Fruit Ninja
 
-This is a Phaser project template that uses the React framework and Vite for bundling. It includes a bridge for React to Phaser game communication, hot-reloading for quick development workflow and scripts to generate production-ready builds.
-
-**[This Template is also available as a JavaScript version.](https://github.com/phaserjs/template-react)**
-
-### Versions
-
-This template has been updated for:
-
-- [Phaser 4](https://github.com/phaserjs/phaser)
-- [React 19.0.0](https://github.com/facebook/react)
-- [Vite 6.3.1](https://github.com/vitejs/vite)
-- [TypeScript 5.7.2](https://github.com/microsoft/TypeScript)
+A fast-paced, physics-based **Fruit Ninja** clone built with **Phaser 4**, **React 19**, **TypeScript**, and **Vite**. Slice fruit, dodge bombs, rack up combos, and chase the high score — playing either with your mouse on desktop or by tilting your phone as a motion controller.
 
 ![screenshot](screenshot.png)
 
-## Requirements
+## ✨ Features
 
-[Node.js](https://nodejs.org) is required to install dependencies and run scripts via `npm`.
+- **Classic Fruit Ninja gameplay** — slice fruit that arcs across the screen with realistic physics, and avoid the bombs that cost you points and a life.
+- **Dynamic difficulty** — the game reads your score and smoothly ramps up spawn rate and fruit speed as you play, so it always stays challenging.
+- **Persistent high score** — your best score is saved to `localStorage`, shown live in the in-game HUD (it tracks your current run as soon as you pass your record) and highlighted on the game-over screen with a **NEW HIGH SCORE!** banner.
+- **3 lives / heart HUD** — lose a heart for every fruit you drop or bomb you slice; lose all three and it's game over.
+- **Juicy juice** — splash effects, fruit halves that fly apart, screen shake, slice/whoosh/impact sound effects, and a full soundtrack.
+- **On-device settings** — toggle music and sound effects from an in-game Settings panel; your choices persist across reloads.
+- **Mobile motion controller** — host a QR code in Settings so a phone can connect via WebRTC (PeerJS) and control the blade by tilting (device orientation), complete with calibration and a recenter button.
+- **Responsive full-screen canvas** — the game fills the browser window and adapts its HUD and spawn logic to any screen size.
 
-## Available Commands
+## 🚀 Getting Started
 
-| Command | Description |
-|---------|-------------|
-| `npm install` | Install project dependencies |
-| `npm run dev` | Launch a development web server |
-| `npm run build` | Create a production build in the `dist` folder |
-| `npm run dev-nolog` | Launch a development web server without sending anonymous data (see "About log.js" below) |
-| `npm run build-nolog` | Create a production build in the `dist` folder without sending anonymous data (see "About log.js" below) |
+### Requirements
 
-## Writing Code
+[Node.js](https://nodejs.org) is required to install dependencies and run the scripts.
 
-After cloning the repo, run `npm install` from your project directory. Then, you can start the local development server by running `npm run dev`.
+### Installation
 
-The local development server runs on `http://localhost:8080` by default. Please see the Vite documentation if you wish to change this, or add SSL support.
+```bash
+# 1. Install dependencies
+npm install
 
-Once the server is running you can edit any of the files in the `src` folder. Vite will automatically recompile your code and then reload the browser.
+# 2. Start the development server
+npm run dev
+```
 
-## Template Project Structure
+The dev server runs at **http://localhost:8080** by default. Vite hot-reloads your changes, so editing any file in `src` updates the browser automatically.
 
-We have provided a default project structure to get you started. This is as follows:
+### Production build
 
-| Path                          | Description                                                                 |
-|-------------------------------|-----------------------------------------------------------------------------|
-| `index.html`                  | A basic HTML page to contain the game.                                     |
-| `src`                         | Contains the React client source code.                                     |
-| `src/main.tsx`                | The main **React** entry point. This bootstraps the React application.      |
-| `src/PhaserGame.tsx`          | The React component that initializes the Phaser Game and acts as a bridge between React and Phaser. |
-| `src/vite-env.d.ts`           | Global TypeScript declarations, providing type information.                |
-| `src/App.tsx`                 | The main React component.                                                  |
-| `src/game/EventBus.ts`        | A simple event bus to communicate between React and Phaser.                |
-| `src/game`                    | Contains the game source code.                                             |
-| `src/game/main.tsx`           | The main **game** entry point. This contains the game configuration and starts the game. |
-| `src/game/scenes/`            | The folder where Phaser Scenes are located.                                |
-| `public/style.css`            | Some simple CSS rules to help with page layout.                            |
-| `public/assets`               | Contains the static assets used by the game.                               |
+```bash
+npm run build
+```
 
-## React Bridge
+This produces an optimized bundle in the `dist/` folder — upload the entire `dist` directory to any static web server to deploy.
 
-The `PhaserGame.tsx` component is the bridge between React and Phaser. It initializes the Phaser game and passes events between the two.
+## 🎮 How to Play
 
-To communicate between React and Phaser, you can use the **EventBus.js** file. This is a simple event bus that allows you to emit and listen for events from both React and Phaser.
+**Desktop (mouse):**
 
-```js
-// In React
-import { EventBus } from './EventBus';
+- Move the mouse to move the blade.
+- Click and drag / sweep to slice fruit.
+- Don't slice the bombs 💣, and don't let fruit fall past the bottom.
 
-// Emit an event
-EventBus.emit('event-name', data);
+**Mobile (motion controller):**
 
-// In Phaser
-// Listen for an event
-EventBus.on('event-name', (data) => {
-    // Do something with the data
+1. Open **Settings** and tap **Play on Mobile** — a QR code appears.
+2. Scan it with your phone (it must be on the same network / reachable host).
+3. Tap **Start** on the phone, then **tilt your phone** to aim the blade.
+4. Use the **Recenter** button on the phone to reset the calibration center.
+
+## 📦 Available Commands
+
+| Command               | Description                                               |
+| --------------------- | --------------------------------------------------------- |
+| `npm install`         | Install project dependencies                              |
+| `npm run dev`         | Launch the development server with hot-reload             |
+| `npm run build`       | Create a production build in the `dist` folder            |
+| `npm run dev-nolog`   | Dev server without the anonymous template log (see below) |
+| `npm run build-nolog` | Production build without the anonymous template log       |
+
+## 🗂 Project Structure
+
+```
+├── index.html                     # HTML entry point
+├── package.json                   # Dependencies + scripts
+├── tsconfig.json                  # TypeScript config
+├── vite/                          # Vite build config (dev + prod)
+└── src/
+    ├── main.tsx                   # React entry point
+    ├── App.tsx                    # Top-level React component
+    ├── PhaserGame.tsx             # React ↔ Phaser bridge component
+    ├── MobileController.tsx       # Mobile tilt controller UI (phone side)
+    └── game/
+        ├── main.ts                # Phaser game config + scene registration
+        ├── EventBus.ts            # Event emitter bridging React and Phaser
+        └── scenes/
+            ├── Boot.ts            # Background load + audio unlock
+            ├── Preloader.ts       # Loads all game assets
+            ├── MainMenu.ts        # Animated title screen + menu buttons
+            ├── Setting.ts         # Music/SFX toggles + mobile QR pairing
+            ├── Game.ts            # Core gameplay (spawning, slicing, scoring, HUD)
+            ├── GameOver.ts        # Final score, high score, play again
+            ├── HighScore.ts       # Persistent high-score store (localStorage)
+            ├── GameSettings.ts    # Persistent settings store (localStorage)
+            ├── Blade.ts           # Blade trail + swipe segment logic
+            ├── DesktopPeer.ts     # PeerJS host (desktop side of mobile pairing)
+            └── MobilePeer.ts      # PeerJS client (phone side of mobile pairing)
+```
+
+### Scene flow
+
+```
+Boot → Preloader → MainMenu → Game → GameOver → (Play Again ⇒ Game | Main Menu)
+                 └──→ Setting (music/SFX toggles, mobile pairing)
+```
+
+## 🔌 React ↔ Phaser Bridge
+
+The **`PhaserGame.tsx`** component initializes the Phaser game and acts as the bridge between React and Phaser. Communication is handled through the **`EventBus`**:
+
+```ts
+// From React
+import { EventBus } from "./game/EventBus";
+EventBus.emit("my-event", data);
+
+// Inside a Phaser scene
+EventBus.on("my-event", (data) => {
+    // handle it
 });
 ```
 
-In addition to this, the `PhaserGame` component exposes the Phaser game instance along with the most recently active Phaser Scene using React forwardRef.
+Each scene also emits `"current-scene-ready"` with itself, so React can grab a reference to the currently active scene via the `PhaserGame` ref.
 
-Once exposed, you can access them like any regular react reference.
+## 🧠 Gameplay Details Worth Knowing
 
-## Phaser Scene Handling
+- **Scoring** — each fruit sliced is `+100`; each bomb sliced is `-300` plus a lost heart.
+- **Difficulty ramp** — difficulty eases from score `0` to `8000`, scaling fruit speed up to `1.8×` and shortening the spawn interval. The scale uses a smoothstep curve for a natural feel.
+- **High score** — stored under the `fruit-ninja-high-score` key in `localStorage`.
+- **Settings** — stored under the `fruit-slice-settings` key in `localStorage`.
 
-In Phaser, the Scene is the lifeblood of your game. It is where you sprites, game logic and all of the Phaser systems live. You can also have multiple scenes running at the same time. This template provides a way to obtain the current active scene from React.
+## About `log.js`
 
-You can get the current Phaser Scene from the component event `"current-active-scene"`. In order to do this, you need to emit the event `"current-scene-ready"` from the Phaser Scene class. This event should be emitted when the scene is ready to be used. You can see this done in all of the Scenes in our template.
+The `dev` and `build` scripts call `log.js`, which makes a single silent, anonymous API call to `gryzor.co` (owned by Phaser Studio Inc.) to report the template name, build type, and Phaser version. No personal data is collected. If you'd rather not send this, use the `-nolog` variants or delete the call from `package.json`.
 
-**Important**: When you add a new Scene to your game, make sure you expose to React by emitting the `"current-scene-ready"` event via the `EventBus`, like this:
+## 📄 License
 
-
-```ts
-class MyScene extends Phaser.Scene
-{
-    constructor ()
-    {
-        super('MyScene');
-    }
-
-    create ()
-    {
-        // Your Game Objects and logic here
-
-        // At the end of create method:
-        EventBus.emit('current-scene-ready', this);
-    }
-}
-```
-
-You don't have to emit this event if you don't need to access the specific scene from React. Also, you don't have to emit it at the end of `create`, you can emit it at any point. For example, should your Scene be waiting for a network request or API call to complete, it could emit the event once that data is ready.
-
-### React Component Example
-
-Here's an example of how to access Phaser data for use in a React Component:
-
-```ts
-import { useRef } from 'react';
-import { IRefPhaserGame } from "./game/PhaserGame";
-
-// In a parent component
-const ReactComponent = () => {
-
-    const phaserRef = useRef<IRefPhaserGame>(); // you can access to this ref from phaserRef.current
-
-    const onCurrentActiveScene = (scene: Phaser.Scene) => {
-    
-        // This is invoked
-
-    }
-
-    return (
-        ...
-        <PhaserGame ref={phaserRef} currentActiveScene={onCurrentActiveScene} />
-        ...
-    );
-
-}
-```
-
-In the code above, you can get a reference to the current Phaser Game instance and the current Scene by creating a reference with `useRef()` and assign to PhaserGame component.
-
-From this state reference, the game instance is available via `phaserRef.current.game` and the most recently active Scene via `phaserRef.current.scene`.
-
-The `onCurrentActiveScene` callback will also be invoked whenever the the Phaser Scene changes, as long as you emit the event via the EventBus, as outlined above.
-
-## Handling Assets
-
-Vite supports loading assets via JavaScript module `import` statements.
-
-This template provides support for both embedding assets and also loading them from a static folder. To embed an asset, you can import it at the top of the JavaScript file you are using it in:
-
-```js
-import logoImg from './assets/logo.png'
-```
-
-To load static files such as audio files, videos, etc place them into the `public/assets` folder. Then you can use this path in the Loader calls within Phaser:
-
-```js
-preload ()
-{
-    //  This is an example of an imported bundled image.
-    //  Remember to import it at the top of this file
-    this.load.image('logo', logoImg);
-
-    //  This is an example of loading a static image
-    //  from the public/assets folder:
-    this.load.image('background', 'assets/bg.png');
-}
-```
-
-When you issue the `npm run build` command, all static assets are automatically copied to the `dist/assets` folder.
-
-## Deploying to Production
-
-After you run the `npm run build` command, your code will be built into a single bundle and saved to the `dist` folder, along with any other assets your project imported, or stored in the public assets folder.
-
-In order to deploy your game, you will need to upload *all* of the contents of the `dist` folder to a public facing web server.
-
-## Customizing the Template
-
-### Vite
-
-If you want to customize your build, such as adding plugin (i.e. for loading CSS or fonts), you can modify the `vite/config.*.mjs` file for cross-project changes, or you can modify and/or create new configuration files and target them in specific npm tasks inside of `package.json`. Please see the [Vite documentation](https://vitejs.dev/) for more information.
-
-## About log.js
-
-If you inspect our node scripts you will see there is a file called `log.js`. This file makes a single silent API call to a domain called `gryzor.co`. This domain is owned by Phaser Studio Inc. The domain name is a homage to one of our favorite retro games.
-
-We send the following 3 pieces of data to this API: The name of the template being used (vue, react, etc). If the build was 'dev' or 'prod' and finally the version of Phaser being used.
-
-At no point is any personal data collected or sent. We don't know about your project files, device, browser or anything else. Feel free to inspect the `log.js` file to confirm this.
-
-Why do we do this? Because being open source means we have no visible metrics about which of our templates are being used. We work hard to maintain a large and diverse set of templates for Phaser developers and this is our small anonymous way to determine if that work is actually paying off, or not. In short, it helps us ensure we're building the tools for you.
-
-However, if you don't want to send any data, you can use these commands instead:
-
-Dev:
-
-```bash
-npm run dev-nolog
-```
-
-Build:
-
-```bash
-npm run build-nolog
-```
-
-Or, to disable the log entirely, simply delete the file `log.js` and remove the call to it in the `scripts` section of `package.json`:
-
-Before:
-
-```json
-"scripts": {
-    "dev": "node log.js dev & dev-template-script",
-    "build": "node log.js build & build-template-script"
-},
-```
-
-After:
-
-```json
-"scripts": {
-    "dev": "dev-template-script",
-    "build": "build-template-script"
-},
-```
-
-Either of these will stop `log.js` from running. If you do decide to do this, please could you at least join our Discord and tell us which template you're using! Or send us a quick email. Either will be super-helpful, thank you.
-
-## Join the Phaser Community!
-
-We love to see what developers like you create with Phaser! It really motivates us to keep improving. So please join our community and show-off your work 😄
-
-**Visit:** The [Phaser website](https://phaser.io) and follow on [Phaser Twitter](https://twitter.com/phaser_)<br />
-**Play:** Some of the amazing games [#madewithphaser](https://twitter.com/search?q=%23madewithphaser&src=typed_query&f=live)<br />
-**Learn:** [API Docs](https://newdocs.phaser.io), [Support Forum](https://phaser.discourse.group/) and [StackOverflow](https://stackoverflow.com/questions/tagged/phaser-framework)<br />
-**Discord:** Join us on [Discord](https://discord.gg/phaser)<br />
-**Code:** 2000+ [Examples](https://labs.phaser.io)<br />
-**Read:** The [Phaser World](https://phaser.io/community/newsletter) Newsletter<br />
-
-Created by [Phaser Studio](mailto:support@phaser.io). Powered by coffee, anime, pixels and love.
-
-The Phaser logo and characters are &copy; 2011 - 2025 Phaser Studio Inc.
-
-All rights reserved.
+This project is built on the [Phaser React TypeScript Template](https://github.com/phaserjs/template-react-ts) and is licensed under the **MIT License**. The Phaser logo and characters are © 2011–2025 Phaser Studio Inc.
