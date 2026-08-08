@@ -3,6 +3,7 @@ import { Scene } from "phaser";
 import * as Phaser from "phaser";
 import { Blade } from "./Blade";
 import { GameSettings } from "./GameSettings";
+import { HighScore } from "./HighScore";
 import {
     bladePosition,
     isMobileConnected,
@@ -50,6 +51,7 @@ export class Game extends Scene {
     camera: Phaser.Cameras.Scene2D.Camera;
     background: Phaser.GameObjects.Image;
     scoreText: Phaser.GameObjects.Text;
+    highScoreText: Phaser.GameObjects.Text;
     healthBar: number = 3;
     maxHealth: number = 3;
     score: number = 0;
@@ -139,11 +141,7 @@ export class Game extends Scene {
             callback: () => this.spawnFruit(),
         });
 
-        this.scoreText = this.add
-            .text(10, 10, `Score: ${this.score}`)
-            .setColor("Yellow")
-            .setScale(1.4)
-            .setDepth(200);
+        this.createHUD();
 
         this.createHealthBar();
 
@@ -492,6 +490,42 @@ export class Game extends Scene {
     }
 
     // ------------------------------------------------------------------
+    // HUD
+    // ------------------------------------------------------------------
+    createHUD() {
+        const { width, height } = this.cameras.main;
+
+        // Score - top-left, with a subtle dark pill behind it for readability
+        this.scoreText = this.add
+            .text(width * 0.02, height * 0.02, `Score: ${this.score}`, {
+                fontFamily: "Arial Black",
+                fontSize: "28px",
+                color: "#ffe066",
+                stroke: "#000000",
+                strokeThickness: 5,
+            })
+            .setOrigin(0, 0)
+            .setDepth(200);
+
+        // High score - to the right of the score, in gold
+        this.highScoreText = this.add
+            .text(
+                width * 0.02,
+                height * 0.02 + 40,
+                `Best: ${HighScore.highScore}`,
+                {
+                    fontFamily: "Arial Black",
+                    fontSize: "20px",
+                    color: "#ffd700",
+                    stroke: "#000000",
+                    strokeThickness: 4,
+                },
+            )
+            .setOrigin(0, 0)
+            .setDepth(200);
+    }
+
+    // ------------------------------------------------------------------
     // HEALTH BAR
     // ------------------------------------------------------------------
     createHealthBar() {
@@ -533,6 +567,12 @@ export class Game extends Scene {
     private addScore(delta: number) {
         this.score += delta;
         this.scoreText.setText(`Score: ${this.score}`);
+
+        // Live "Best" counter: once the current run beats the stored record,
+        // the Best line tracks the player's score in real time.
+        if (this.score > HighScore.highScore) {
+            this.highScoreText.setText(`Best: ${this.score}`);
+        }
     }
 
     decreaseHealth() {
@@ -639,7 +679,12 @@ export class Game extends Scene {
     }
 
     changeScene() {
-        this.scene.start("GameOver", { score: this.score });
+        const isNewHighScore = HighScore.submit(this.score);
+        this.scene.start("GameOver", {
+            score: this.score,
+            isNewHighScore,
+            highScore: HighScore.highScore,
+        });
     }
 }
 
