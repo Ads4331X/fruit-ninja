@@ -92,9 +92,7 @@ export class Game extends Scene {
 
     private spawnTimer!: Phaser.Time.TimerEvent;
 
-    // Dedicated group for fruits/bombs only, so slice-detection and the
-    // offscreen check don't have to scan every object in the scene
-    // (background, text, hearts, splash/half decorations, etc).
+    // Group holding only the spawnable fruits/bombs.
     private spawnables!: Phaser.Physics.Arcade.Group;
 
     // ------------------------------------------------------------------
@@ -112,15 +110,9 @@ export class Game extends Scene {
     create() {
         this.camera = this.cameras.main;
 
-        // Phaser reuses this Scene instance across every "Play Again" /
-        // scene.start("Game") call - it does NOT re-run the constructor,
-        // so class field defaults (score = 0, healthBar = 3) only apply
-        // once, at boot. Without resetting here, each new game silently
-        // carries over whatever score/health was left from the last one.
+        // Reset state each time the scene restarts (constructor only runs once).
         this.score = 0;
         this.healthBar = this.maxHealth;
-        // Start the blade at the center of the screen so it's easy to
-        // move initially, instead of wherever it was left last game.
         resetBladePosition();
 
         this.background = this.add
@@ -157,15 +149,12 @@ export class Game extends Scene {
             this.applyMusicMute();
         }
 
-        // Keep bgm mute state in sync if the player changes it from the
-        // Settings scene (or anywhere else) while this scene is active.
+        // Keep bgm mute state in sync with the settings.
         this.unsubscribeSettings = GameSettings.onChange(() =>
             this.applyMusicMute(),
         );
 
-        // The default cursor is a shared input-manager setting, not scoped
-        // to this scene, so it must be explicitly restored on shutdown or
-        // every scene after Game (GameOver, MainMenu, ...) inherits "none".
+        // Restore the cursor on shutdown so later scenes aren't left hidden.
         this.events.once("shutdown", () => {
             this.unsubscribeSettings?.();
             this.input.setDefaultCursor("default");
@@ -244,11 +233,7 @@ export class Game extends Scene {
         });
     }
 
-    /**
-     * bladePosition.x/y are now 0-1 fractions of the mobile touchpad area
-     * (see MobileController.tsx), mapped directly onto the game canvas -
-     * simpler and far more predictable than device-tilt.
-     */
+    // bladePosition is a 0-1 fraction of the mobile touchpad area.
     private updateBladeFromMobile() {
         if (!isMobileConnected) return;
 
@@ -495,7 +480,7 @@ export class Game extends Scene {
     createHUD() {
         const { width, height } = this.cameras.main;
 
-        // Score - top-left, with a subtle dark pill behind it for readability
+        // Score - top-left.
         this.scoreText = this.add
             .text(width * 0.02, height * 0.02, `Score: ${this.score}`, {
                 fontFamily: "Arial Black",
@@ -507,7 +492,7 @@ export class Game extends Scene {
             .setOrigin(0, 0)
             .setDepth(200);
 
-        // High score - to the right of the score, in gold
+        // High score - below the score, in gold.
         this.highScoreText = this.add
             .text(
                 width * 0.02,
@@ -568,8 +553,7 @@ export class Game extends Scene {
         this.score += delta;
         this.scoreText.setText(`Score: ${this.score}`);
 
-        // Live "Best" counter: once the current run beats the stored record,
-        // the Best line tracks the player's score in real time.
+        // Live "Best" counter once the current run beats the stored record.
         if (this.score > HighScore.highScore) {
             this.highScoreText.setText(`Best: ${this.score}`);
         }
@@ -617,24 +601,13 @@ export class Game extends Scene {
 
         const upwardSpeed = Math.sqrt(2 * effectiveGravityY * targetPeakHeight);
 
-        // --- Horizontal drift safety (prevents fruit escaping off the
-        // left/right edges before it comes back down) -------------------
-        // Total time the fruit is airborne (up + back down): from
-        // v = g*t/2 solved for t.
+        // Cap horizontal drift so fruit doesn't fly off the edges.
         const flightTime = (2 * upwardSpeed) / effectiveGravityY;
 
-        // Room actually available in each direction from this specific
-        // spawn x, so edge-spawned fruit gets a tighter cap than
-        // center-spawned fruit.
         const roomLeft = x - margin;
         const roomRight = width - margin - x;
         const maxDriftDistance = Math.max(Math.min(roomLeft, roomRight), 0);
 
-        // Max sideways speed such that speed * flightTime never exceeds
-        // the available room. Also divide out speedMultiplier up front
-        // since it gets re-applied to sidewaysSpeed below - otherwise a
-        // high-difficulty multiplier could push the final speed back
-        // past the safe bound.
         const maxSidewaysBySpace =
             flightTime > 0
                 ? maxDriftDistance / flightTime / Math.max(speedMultiplier, 1)

@@ -76,7 +76,7 @@ export class Preloader extends Scene {
         this.load.image("heart_empty", "empty_heart.png");
         this.load.image("logo", "logo.png");
 
-        // diagnostic — logs the exact failing file/URL for any load error
+        // Log the failing file/URL for any load error.
         this.load.on("loaderror", (file: Phaser.Loader.File) => {
             console.error(
                 `[Preloader] FAILED to load "${file.key}" from: ${file.src}`,

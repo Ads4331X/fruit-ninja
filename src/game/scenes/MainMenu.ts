@@ -79,18 +79,9 @@ export class MainMenu extends Scene {
     }
 
     /**
-     * Best-effort unlock of the Web Audio context so UI/hover sounds can play.
-     *
-     * Browsers suspend the AudioContext until a user gesture, and only
-     * "activation" events (mousedown/pointerdown/keydown) grant audio access.
-     * This method:
-     *   1. Resumes immediately on scene entry — works on localhost and repeat
-     *      visitors (high Media Engagement) so the very first hover already
-     *      makes a sound.
-     *   2. Hooks the game's input so the first pointer-down/keydown anywhere
-     *      unlocks audio immediately (hover sounds work from then on).
-     *   3. Best-effort resume on pointer move, which some browsers accept and
-     *      which makes even the very first hover audible where permitted.
+     * Best-effort unlock of the Web Audio context so UI sounds can play.
+     * Browsers suspend the context until a user gesture, so we resume on
+     * scene entry, on repeat retries, and on the first pointer/key gesture.
      */
     private setupAudioUnlock() {
         const webAudio = this.sound as Phaser.Sound.WebAudioSoundManager;
@@ -99,12 +90,12 @@ export class MainMenu extends Scene {
         const resume = () => {
             if (ctx && ctx.state === "suspended") {
                 ctx.resume().catch(() => {
-                    /* autoplay blocked — a real user gesture unlocks it */
+                    /* autoplay blocked - a real user gesture unlocks it */
                 });
             }
         };
 
-        // 1) Immediate best-effort resume on scene entry.
+        // 1) Immediate resume on scene entry.
         resume();
 
         // 2) Keep trying as soon as the browser grants audio access.
@@ -113,9 +104,7 @@ export class MainMenu extends Scene {
         };
         ctx?.addEventListener?.("statechange", onStateChange);
 
-        // 3) Unlock on early pointer gestures. Pointer-down/keydown are the
-        //    reliable activation events; pointer-move is best-effort (accepted
-        //    by some browsers / when autoplay is already permitted).
+        // 3) Unlock on early pointer gestures.
         const onPointerMove = () => resume();
         const onPointerDown = () => resume();
         const onKeyDown = () => resume();
@@ -124,7 +113,7 @@ export class MainMenu extends Scene {
         this.input.on("pointerdown", onPointerDown);
         this.input.keyboard?.on("keydown", onKeyDown);
 
-        // Clean up so a destroyed scene never leaks listeners into the next.
+        // Clean up listeners on shutdown.
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             ctx?.removeEventListener?.("statechange", onStateChange);
             this.input.off("pointermove", onPointerMove);
@@ -138,17 +127,8 @@ export class MainMenu extends Scene {
     // ------------------------------------------------------------------
 
     /**
-     * Plays a sound effect safely.
-     *
-     * Unlike a naive "wait for UNLOCKED" approach, we call `sound.play()` right
-     * away: Web Audio schedules the buffer even while the context is suspended,
-     * so the moment the browser lets the context resume the sound is already
-     * queued and becomes audible immediately. If the context is still locked
-     * (and we're inside a real user gesture, e.g. a button click), the play
-     * call itself is part of the gesture and takes effect at once.
-     *
-     * As a safety net we also queue the sound on the UNLOCKED event, guarded by
-     * a timestamp so a fast unlock doesn't cause a double-play.
+     * Plays a sound effect safely. Schedules the sound immediately and, if
+     * the context is still locked, queues it for the unlock event.
      */
     private playSfx(key: string, config?: Phaser.Types.Sound.SoundConfig) {
         const exists = this.cache.audio.exists(key);
@@ -156,12 +136,10 @@ export class MainMenu extends Scene {
 
         const locked = this.sound.locked;
 
-        // 1) Try to play immediately. If the context is suspended this is still
-        //    scheduled and will begin as soon as the browser resumes audio.
+        // 1) Try to play immediately.
         const played = this.sound.play(key, config);
 
-        // 2) Safety net for browsers where a suspended-context play() is not
-        //    enough — queue it for the instant the sound manager unlocks.
+        // 2) Queue it for the unlock event if the context is still locked.
         if (locked && !played) {
             const cfg = config ?? {};
             const guardKey = `sfx_${key}`;
@@ -327,22 +305,18 @@ export class MainMenu extends Scene {
         const configs: ButtonConfig[] = [
             { label: "PLAY", onClick: () => this.transitionToScene("Game") },
             {
+                label: "MULTIPLAYER",
+                onClick: () => this.transitionToScene("Multiplayer"),
+            },
+            {
                 label: "SETTINGS",
                 onClick: () => this.transitionToScene("Setting"),
             },
         ];
 
-        const { width, height } = this.cameras.main;
-
-        // Buttons form a vertical stack, centered as a group in the lower
-        // portion of the screen (roughly the 62%–88% band). This keeps them
-        // clear of the logo above and — critically — clear of the bottom
-        // edge/safe-area below, instead of being pinned right against it.
-        const centerX = width / 2;
-        const spacing = Math.round(Phaser.Math.Clamp(height * 0.14, 90, 120));
-        const groupCenterY = height * 0.74;
-        const totalHeight = (configs.length - 1) * spacing;
-        const startY = groupCenterY - totalHeight / 2;
+        const centerX = this.cameras.main.centerX;
+        const startY = this.cameras.main.height * 0.5;
+        const spacing = 110;
 
         configs.forEach((cfg, i) => {
             const btn = this.createAnimatedButton(
@@ -352,18 +326,6 @@ export class MainMenu extends Scene {
                 cfg.onClick,
             );
             this.buttons.push(btn);
-
-            // Subtle staggered entrance so the stack doesn't feel like it was
-            // just dropped in place.
-            btn.setScale(0.9).setAlpha(0);
-            this.tweens.add({
-                targets: btn,
-                scale: 1,
-                alpha: 1,
-                duration: 320,
-                delay: 120 + i * 90,
-                ease: "Back.easeOut",
-            });
         });
     }
 
@@ -375,18 +337,13 @@ export class MainMenu extends Scene {
     ): Phaser.GameObjects.Container {
         const container = this.add.container(x, y).setDepth(10);
 
-        // Width scales with the viewport (with sensible min/max) instead of
-        // a hard-coded 300px, so buttons don't overflow narrow screens or
-        // look undersized on wide ones.
-        const btnWidth = Math.round(
-            Phaser.Math.Clamp(this.cameras.main.width * 0.62, 220, 340),
-        );
-        const btnHeight = 74;
+        const btnWidth = 300;
+        const btnHeight = 78;
 
         const shadow = this.add.graphics();
-        shadow.fillStyle(0x000000, 0.3);
+        shadow.fillStyle(0x000000, 0.35);
         shadow.fillRoundedRect(
-            -btnWidth / 2,
+            -btnWidth / 2 + 4,
             -btnHeight / 2 + 6,
             btnWidth,
             btnHeight,
@@ -490,35 +447,17 @@ export class MainMenu extends Scene {
 
             this.tweens.add({
                 targets: container,
-                scale: 1.08,
+                scale: 1.1,
                 duration: 150,
                 ease: "Sine.easeOut",
             });
             gloss.setAlpha(0.3);
-            border.clear();
-            border.lineStyle(4, 0xffe1a3, 1);
-            border.strokeRoundedRect(
-                -btnWidth / 2,
-                -btnHeight / 2,
-                btnWidth,
-                btnHeight,
-                22,
-            );
 
             this.playSfx("ui_tap", { volume: 0.2 });
         });
 
         hitZone.on("pointerout", () => {
             gloss.setAlpha(1);
-            border.clear();
-            border.lineStyle(4, 0xf0c987, 1);
-            border.strokeRoundedRect(
-                -btnWidth / 2,
-                -btnHeight / 2,
-                btnWidth,
-                btnHeight,
-                22,
-            );
 
             this.tweens.add({
                 targets: container,

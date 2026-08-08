@@ -37,7 +37,7 @@ export class GameOver extends Scene {
         this.background.setAlpha(0.25);
         this.background.setDisplaySize(width, height);
 
-        // Dark vignette overlay for contrast
+        // Dark vignette overlay for contrast.
         this.add
             .graphics()
             .fillGradientStyle(
@@ -52,11 +52,11 @@ export class GameOver extends Scene {
             )
             .fillRect(0, 0, width, height);
 
-        // --- Main content container ---
+        // Main content container.
         const container = this.add.container(centerX, centerY - 10);
         container.setAlpha(0);
 
-        // --- Title ---
+        // Title.
         this.gameOverText = this.add
             .text(0, -190, "GAME OVER", {
                 fontFamily: "Arial Black",
@@ -68,7 +68,7 @@ export class GameOver extends Scene {
             })
             .setOrigin(0.5);
 
-        // --- Score panel with rounded background ---
+        // Score panel with rounded background.
         const panelW = 360;
         const panelH = 190;
         const panelY = -40;
@@ -91,7 +91,7 @@ export class GameOver extends Scene {
             24,
         );
 
-        // Label
+        // Label.
         const labelText = this.add
             .text(0, panelY - 62, "YOUR SCORE", {
                 fontFamily: "Arial Black",
@@ -103,7 +103,7 @@ export class GameOver extends Scene {
             .setOrigin(0.5)
             .setAlpha(0.7);
 
-        // Score value (animated counter)
+        // Score value (animated counter).
         const scoreText = this.add
             .text(0, panelY + 8, "0", {
                 fontFamily: "Arial Black",
@@ -114,7 +114,7 @@ export class GameOver extends Scene {
             })
             .setOrigin(0.5);
 
-        // High score line
+        // High score line.
         const highScoreText = this.add
             .text(0, panelY + 62, `BEST  ${this.highScore}`, {
                 fontFamily: "Arial Black",
@@ -126,7 +126,7 @@ export class GameOver extends Scene {
             .setOrigin(0.5)
             .setAlpha(0.85);
 
-        // --- New High Score celebration ---
+        // New High Score celebration.
         let newHighScoreText: Phaser.GameObjects.Text | null = null;
         if (this.isNewHighScore) {
             newHighScoreText = this.add
@@ -140,7 +140,7 @@ export class GameOver extends Scene {
                 .setOrigin(0.5)
                 .setAlpha(0);
 
-            // Pulsing glow animation
+            // Pulsing glow animation.
             this.tweens.add({
                 targets: newHighScoreText,
                 scale: { from: 0.8, to: 1.1 },
@@ -160,7 +160,7 @@ export class GameOver extends Scene {
             });
         }
 
-        // --- Buttons ---
+        // Buttons.
         const playAgainBtn = this.createButton(
             0,
             155,
@@ -181,7 +181,7 @@ export class GameOver extends Scene {
             },
         );
 
-        // Add all elements to the container
+        // Add all elements to the container.
         const items: (Phaser.GameObjects.GameObject | null)[] = [
             panel,
             labelText,
@@ -194,7 +194,7 @@ export class GameOver extends Scene {
         ];
         container.add(items.filter((item) => item !== null));
 
-        // Fade + slight upward slide-in
+        // Fade + slight upward slide-in.
         container.setY(container.y + 30);
         this.cameras.main.flash(300, 255, 0, 0);
         this.tweens.add({
@@ -205,7 +205,7 @@ export class GameOver extends Scene {
             ease: "Back.easeOut",
         });
 
-        // Animated score counter
+        // Animated score counter.
         this.tweens.addCounter({
             from: 0,
             to: this.finalScore,
@@ -217,18 +217,14 @@ export class GameOver extends Scene {
             },
         });
 
-        // Make sure the pointer is visible
+        // Make sure the pointer is visible.
         this.input.setDefaultCursor("default");
 
         EventBus.emit("current-scene-ready", this);
     }
 
-    /**
-     * Rounded, filled panel button with hover-grow / press-shrink feedback.
-     * Fires on pointerdown (not pointerup) with a padded hit area, since on
-     * touch a release that drifts even slightly outside a tight hit box
-     * would otherwise silently swallow the tap.
-     */
+    // Rounded button with hover/press feedback. Fires on pointerdown with
+    // a padded hit area so taps on touch devices aren't easily missed.
     private createButton(
         x: number,
         y: number,
@@ -241,16 +237,16 @@ export class GameOver extends Scene {
         const radius = 16;
         const hitPadding = 14; // extra forgiving tap area on touch devices
 
-        // Shadow
+        // Shadow.
         const shadow = this.add.graphics();
         shadow.fillStyle(0x000000, 0.4);
         shadow.fillRoundedRect(-w / 2 + 3, -h / 2 + 5, w, h, radius);
 
-        // Main body
+        // Main body.
         const bg = this.add.graphics();
         bg.fillStyle(color, 1);
         bg.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
-        // Gloss highlight (top half)
+        // Gloss highlight (top half).
         bg.fillStyle(0xffffff, 0.12);
         bg.slice(
             -w / 2 + radius,
@@ -268,7 +264,7 @@ export class GameOver extends Scene {
             (h - 12) * 0.45,
             radius - 4,
         );
-        // Border
+        // Border.
         bg.lineStyle(2, 0xffffff, 0.3);
         bg.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
 

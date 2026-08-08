@@ -9,11 +9,7 @@ export class Setting extends Scene {
 
     private readonly toggleWidth = 90;
     private readonly toggleHeight = 44;
-    // onMobileConnected registers a listener on the shared desktopPeer
-    // instance, which lives outside this scene. Without this guard,
-    // clicking "Play on Mobile" more than once (e.g. after backing out
-    // and re-entering Settings) would stack duplicate listeners, each
-    // firing its own callback and possibly starting the Game scene twice.
+    // Prevents stacking duplicate mobile connection listeners on re-entry.
     private mobileListenerRegistered = false;
 
     constructor() {

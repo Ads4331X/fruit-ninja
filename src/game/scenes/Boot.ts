@@ -10,28 +10,16 @@ export class Boot extends Scene {
     }
 
     create() {
-        // don't auto-pause audio on focus loss / stray clicks —
-        // pausing should only happen from an explicit Settings toggle
+        // Don't auto-pause audio on focus loss; only explicit settings changes pause it.
         this.sound.pauseOnBlur = false;
 
-        /**
-         * Tries to resume the Web Audio context and unlock the sound manager.
-         *
-         * The browser only allows audio after a "user activation", so we try
-         * every path we legally can:
-         *  - immediately, for browsers that permit autoplay (repeat visitors,
-         *    high Media Engagement, localhost policies) → menu music starts
-         *    with ZERO clicks;
-         *  - repeatedly for a few seconds, because some browsers only grant
-         *    resume once the page/audio graph has fully settled;
-         *  - on the very first user gesture, for browsers that block autoplay
-         *    (the already-scheduled menu music / SFX become audible instantly).
-         */
+        // Browsers only allow audio after a user gesture, so try every legal path:
+        // immediately, on a short retry loop, and on the first user gesture.
         const resumeContext = () => {
             const webAudio = this.sound as Phaser.Sound.WebAudioSoundManager;
             if (webAudio.context && webAudio.context.state === "suspended") {
                 webAudio.context.resume().catch(() => {
-                    /* autoplay blocked — gesture listener below covers it */
+                    /* autoplay blocked - gesture listener below covers it */
                 });
             }
         };
@@ -46,8 +34,7 @@ export class Boot extends Scene {
         // 1) Immediate resume for autoplay-permitted browsers.
         tryResume();
 
-        // 2) Periodic retries — a browser that permits autoplay will succeed
-        //    on one of these even if the very first attempt is too early.
+        // 2) Periodic retries in case the audio graph isn't ready yet.
         let attempts = 0;
         const maxAttempts = 12; // ~6 seconds
         const retry = () => {
@@ -64,9 +51,7 @@ export class Boot extends Scene {
         };
         retry();
 
-        // 3) Fallback: unlock on the very first real user gesture anywhere on
-        //    the page (click, tap, keypress, scroll). As soon as the user
-        //    interacts at all, audio becomes active.
+        // 3) Fallback: unlock on the first user gesture.
         const gestureEvents = [
             "pointerdown",
             "mousedown",

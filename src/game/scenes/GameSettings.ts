@@ -1,5 +1,5 @@
-// A tiny global settings store shared across every scene.
-// Persists to localStorage so preferences survive a page reload.
+// Global settings store shared across every scene.
+// Persists to localStorage.
 
 type SettingsChangeListener = () => void;
 
@@ -26,7 +26,7 @@ class GameSettingsStore {
             const raw = localStorage.getItem(GameSettingsStore.STORAGE_KEY);
             return raw ? (JSON.parse(raw) as StoredSettings) : {};
         } catch {
-            // localStorage unavailable (private browsing, SSR, etc).
+            // localStorage unavailable.
             return {};
         }
     }
@@ -42,7 +42,7 @@ class GameSettingsStore {
                 JSON.stringify(payload),
             );
         } catch {
-            // Ignore write failures - settings just won't persist.
+            // Ignore write failures.
         }
     }
 
@@ -74,7 +74,7 @@ class GameSettingsStore {
         this.setSfxMuted(!this._sfxMuted);
     }
 
-    /** Subscribe to any settings change. Returns an unsubscribe function. */
+    /** Subscribe to settings changes. Returns an unsubscribe function. */
     onChange(listener: SettingsChangeListener) {
         this.listeners.push(listener);
         return () => {

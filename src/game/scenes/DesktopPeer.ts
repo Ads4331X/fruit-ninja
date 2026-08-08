@@ -1,6 +1,6 @@
 import Peer from "peerjs";
 
-// desktop
+// Desktop-side PeerJS host.
 let desktopPeer = new Peer();
 let desktopID = "";
 
@@ -23,9 +23,7 @@ export function getPeerID(): Promise<string> {
     });
 }
 
-// bladePosition is a 0-1 fraction of the mobile touchpad area, sent by
-// MobileController.tsx on every touchmove. Game.ts multiplies it by the
-// canvas width/height directly - no tilt calibration involved.
+// Blade position as a 0-1 fraction of the mobile touchpad area.
 export const bladePosition = { x: 0.5, y: 0.5 };
 export let isMobileConnected = false;
 

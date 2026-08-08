@@ -1,28 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { connectToDesktop } from "./game/scenes/MobilePeer";
 
-// ---------------------------------------------------------------------
-// ABSOLUTE-POSITION GYRO SETTINGS
-//
-// Tilt maps directly to an absolute blade position (like a mouse or a
-// real Fruit Ninja swipe). The blade follows exactly where you point the
-// phone. A large tilt range means you can reach every corner without the
-// blade getting stuck at an edge, and smoothing removes jitter so aiming
-// stays accurate.
-// ---------------------------------------------------------------------
-
-// Degrees of tilt (from the calibrated center) that maps to the edge of
-// the screen in one direction. Larger = you must tilt further to reach
-// the edge (less sensitive, more accurate aiming). Smaller = twitchier.
+// Tilt maps directly to an absolute blade position.
+// Degrees of tilt needed to reach the screen edge in one direction.
 const TILT_RANGE_DEG = 30;
 
-// Small tilts inside this dead zone are treated as "center" so the blade
-// doesn't jitter when you're holding the phone still.
+// Small tilts inside this dead zone count as "center" to prevent jitter.
 const DEAD_ZONE_DEG = 1.5;
 
-// Controls how quickly the blade responds to a change in tilt.
-// 0 = very floaty/smooth, 1 = instant but possibly jittery.
-// Higher values reduce perceived lag.
+// How quickly the blade responds to tilt. 0 = smooth/floaty, 1 = instant.
 const SMOOTHING = 0.8;
 
 export default function MobileController() {
@@ -30,17 +16,13 @@ export default function MobileController() {
     const peerId = String(param.get("id"));
     const connRef = useRef<any>(null);
 
-    // Center orientation, captured on start / recenter. Everything else
-    // is measured as a delta from this point, not an absolute angle -
-    // absolute device orientation depends on how you're holding the
-    // phone, which is exactly what made the old version confusing.
+    // Calibration center captured on start / recenter.
     const centerRef = useRef<{ beta: number; gamma: number } | null>(null);
     const listenerRef = useRef<((e: DeviceOrientationEvent) => void) | null>(
         null,
     );
 
-    // Smoothed cursor position (0-1) kept in a ref so the handler can
-    // read and update it without re-rendering for every raw gyro sample.
+    // Smoothed cursor position (0-1), kept in a ref to avoid re-rendering.
     const positionRef = useRef({ x: 0.5, y: 0.5 });
 
     const [dot, setDot] = useState({ x: 0.5, y: 0.5 });
@@ -83,8 +65,7 @@ export default function MobileController() {
             const gamma = event.gamma ?? 0; // left-right tilt
 
             if (!centerRef.current) {
-                // First reading becomes the calibration center - whatever
-                // angle you're holding the phone at right now is "middle".
+                // First reading becomes the calibration center.
                 centerRef.current = { beta, gamma };
                 return;
             }
@@ -92,18 +73,14 @@ export default function MobileController() {
             const dGamma = gamma - centerRef.current.gamma; // left/right
             const dBeta = beta - centerRef.current.beta; // up/down
 
-            // Absolute positioning: map tilt directly to a 0-1 blade
-            // position. Apply a small dead zone so holding still doesn't
-            // jitter, then smooth toward it for accurate aiming.
+            // Map tilt directly to a 0-1 blade position.
             let targetX = 0.5 + dGamma / (TILT_RANGE_DEG * 2);
             let targetY = 0.5 + dBeta / (TILT_RANGE_DEG * 2);
 
             if (Math.abs(dGamma) < DEAD_ZONE_DEG) targetX = 0.5;
             if (Math.abs(dBeta) < DEAD_ZONE_DEG) targetY = 0.5;
 
-            // Exponential low-pass filter: glide toward the target rather
-            // than jumping, which removes gyro jitter while keeping the
-            // blade following your hand accurately.
+            // Low-pass filter to smooth out gyro jitter.
             positionRef.current.x +=
                 (targetX - positionRef.current.x) * SMOOTHING;
             positionRef.current.y +=
@@ -126,8 +103,7 @@ export default function MobileController() {
         const DOE = window.DeviceOrientationEvent as any;
 
         if (typeof DOE?.requestPermission === "function") {
-            // iOS 13+ requires an explicit permission prompt, which must be
-            // triggered from a user gesture (this button tap).
+            // iOS 13+ requires permission triggered from a user gesture.
             try {
                 const permission = await DOE.requestPermission();
                 if (permission !== "granted") {
@@ -150,21 +126,15 @@ export default function MobileController() {
         attachOrientationListener();
         setStatus("active");
         connRef.current?.send({ type: "ready" });
-        // Tell the desktop to place the blade at the center immediately so
-        // it doesn't start from wherever it was left last time.
+        // Move the blade to center on the desktop.
         connRef.current?.send({ type: "move", x: 0.5, y: 0.5 });
     }
 
     function handleRecenter() {
-        // Reset the calibration center so the phone's current orientation
-        // becomes the new "middle".
+        // Reset the calibration center and the blade back to center.
         centerRef.current = null;
-        // Also reset the smoothed position and the displayed dot back to
-        // the center, otherwise the blade stays wherever it was and the
-        // recenter button appears to do nothing.
-        positionRef.current = { x: 0.5, y: 0.5 }; // cursor back to center
+        positionRef.current = { x: 0.5, y: 0.5 };
         setDot({ x: 0.5, y: 0.5 });
-        // Let the desktop know the blade moved to center immediately.
         connRef.current?.send({ type: "move", x: 0.5, y: 0.5 });
     }
 
